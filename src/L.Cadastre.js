@@ -51,7 +51,10 @@
         },
 
         getShift: function () {
-            return this.options.shiftPosition;
+            if (!this._pos) {
+                this._pos = L.point(0, 0);;
+            }
+            return this.options.shiftPosition.add(this._pos);
         },
 
         setShift: function (point) {
@@ -166,13 +169,13 @@
             return this;
         },
 
-        enableShiftMode: function () {
-            return this;
-        },
+        // enableShiftMode: function () {
+            // return this;
+        // },
 
-        disableShiftMode: function () {
-            return this;
-        },
+        // disableShiftMode: function () {
+            // return this;
+        // },
 
         enableInfoMode: function () {
             return this;
