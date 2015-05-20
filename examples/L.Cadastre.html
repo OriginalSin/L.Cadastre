@@ -65,10 +65,7 @@
             zoom: 17
         });
     
-        var cadastreLayer = new L.Cadastre(null, {infoMode: true}).on('tileerror', function (ev) {
-            this.options.errorTileUrl = ev.url + '&';
-            console.log('tileerror', ev.url);
-        });
+        var cadastreLayer = new L.Cadastre(null, {infoMode: true});
 
         L.control.layers({
             OSM: osm,

@@ -536,7 +536,7 @@
             setDateField("border_actual_date", borderContent);
 
         }, function () {
-            info.popup.fire('loaderhide');
+            info.popup.fire('loaderend');
         });
 
     };
@@ -1170,7 +1170,7 @@
     };
 
     function showInfoWindow(objectType, featureSet) {
-        info.popup.fire('loaderhide');
+        info.popup.fire('loaderend');
 
         var popup = info.popup,
             lmap = info.layer._map;
@@ -1264,7 +1264,7 @@
         }
     };
     var requestError = function () {
-        info.popup.fire('loaderhide');
+        info.popup.fire('loaderend');
         if (silent) {
             currentFeature.properties.status = "ошибка при получении данных";
             dequeueRequest();
@@ -1274,7 +1274,7 @@
     var prepareContent = function (latlng, cadastreLayer) {
         info.popup
             .setLatLng(latlng)
-            .fire('loadershow');
+            .fire('loaderstart');
         
         var par = utils.getRequestParams('identify', cadastreLayer, latlng);
 
@@ -1409,7 +1409,7 @@
             var cadType = getCadastreType(value),
                 lmap = info.layer._map;
 
-            info.popup.fire('loadershow');
+            info.popup.fire('loaderstart');
 
             if (cadType == CadastreTypes.parcel) {
 
@@ -1424,7 +1424,7 @@
                         returnGeometry: 'false'
                     }, { callbackParamName: 'callback' }
                 ).then(function(data) {
-                    info.popup.fire('loaderhide');
+                    info.popup.fire('loaderend');
 
                     if (data.features.length == 0) {
                         alert("Не найдено.");
@@ -1436,7 +1436,7 @@
                     lmap.setView(featureExtent.latlng, toZoom);
                     createBalloonInfo(featureExtent.latlng);
                 }, function () {
-                    info.popup.fire('loaderhide');
+                    info.popup.fire('loaderend');
                 });
             } else {
 
@@ -1452,7 +1452,7 @@
                         outSR: '4326'
                     }, { callbackParamName: 'callback' }
                 ).then(function(data) {
-                    info.popup.fire('loaderhide');
+                    info.popup.fire('loaderend');
                     removeBalloonInfo();
                     overlays.clear(true);
 
@@ -1466,7 +1466,7 @@
                     showInfoWindow(cadType, data);
 
                 }, function () {
-                    info.popup.fire('loaderhide');
+                    info.popup.fire('loaderend');
                 });
             }
         }
@@ -1536,7 +1536,7 @@
                     data.arr[len].onRemove(lmap);
                 }
 
-                info.popup.fire('loaderhide');
+                info.popup.fire('loaderend');
                 return;
             }
             var mapExtent = utils.getMapExtent(info.layer),
@@ -1566,7 +1566,7 @@
             overlays[type].arr.push(new L.ImageOverlay.Pane(imageUrl, lmap.getBounds())
                 .on('load', function() {
                     overlays.clear(false, type);
-                    info.popup.fire('loaderhide');
+                    info.popup.fire('loaderend');
                 })
                 .addTo(lmap)
                 .setZIndex(zIndex)
