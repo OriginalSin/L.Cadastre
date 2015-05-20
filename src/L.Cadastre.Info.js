@@ -536,8 +536,7 @@
             setDateField("border_actual_date", borderContent);
 
         }, function () {
-            $('#loader').hide();
-            $("#alert").show();
+            info.popup.fire('loaderhide');
         });
 
     };
@@ -973,38 +972,17 @@
         return cadNumber;
     };
 
-    _translationsHash.addtext("rus", {
-        cadastrePlugin: {
-            doSearch: 'Найти'
-        }
-    });
+    // _translationsHash.addtext("rus", {
+        // cadastrePlugin: {
+            // doSearch: 'Найти'
+        // }
+    // });
 
-    _translationsHash.addtext("eng", {
-        cadastrePlugin: {
-            doSearch: 'Search'
-        }
-    });
-
-    var extendJQuery;
-    extendJQuery = function () {
-        $('input.inputStyle').each(function () {
-            $(this)
-			.data('default', $(this).val())
-			.addClass('inactive')
-			.focus(function () {
-			    $(this).removeClass('inactive');
-			    if ($(this).val() === $(this).data('default') || $(this).val() === '') {
-			        $(this).val('');
-			    }
-			})
-			.blur(function () {
-			    if ($(this).val() === '') {
-			        $(this).addClass('inactive').val($(this).data('default'));
-			    }
-			});
-        });
-    }
-    extendJQuery();
+    // _translationsHash.addtext("eng", {
+        // cadastrePlugin: {
+            // doSearch: 'Search'
+        // }
+    // });
 
     /*Разсширение для String
     *добавлено для нормазации кадастрового номера 10 -> 0010
@@ -1192,15 +1170,15 @@
     };
 
     function showInfoWindow(objectType, featureSet) {
-        $("#loader").hide();
-        $("#alert").hide();
+        info.popup.fire('loaderhide');
 
-        var lmap = nsGmx.leafletMap || gmxAPI._leaflet.LMap;
-        balloonInfo = popup;
+        var popup = info.popup,
+            lmap = info.layer._map;
+        var popup = info.popup;
         if (!silent) {
-            balloonInfo.openOn(lmap);
+            popup.openOn(lmap);
         } else {
-            lmap.removeLayer(balloonInfo);
+            lmap.removeLayer(info.popup);
         }
 
         var html = "<div style='width: 370px; max-height: 230px; min-height: 150px; overflow-x: auto; overflow-y: auto;'>";
@@ -1218,7 +1196,7 @@
         addPointAttribute(featureSet.features);
         showResultList(objectType, featureSet.features);
         var content = buildInfoWindowContent(objectType, featureSet.features[0]);
-        balloonInfo.setContent(title + content);
+        popup.setContent(title + content);
 
         //
         //
@@ -1278,10 +1256,6 @@
 
     //окно не  будет показано, данные сохраняются в контейнере
     var silent = false;
-    var popup = L.popup({minWidth: 400});
-    popup.on('close', function(ev) {
-        overlays.clear(true);
-    });
     var removeBalloonInfo = function () {
         if (balloonInfo) {
             var lmap = nsGmx.leafletMap || gmxAPI._leaflet.LMap;
@@ -1290,44 +1264,23 @@
         }
     };
     var requestError = function () {
-        $('#loader').hide();
-        $("#alert").show();
+        info.popup.fire('loaderhide');
         if (silent) {
             currentFeature.properties.status = "ошибка при получении данных";
             dequeueRequest();
         }
     };
 
-    var createBalloonInfo = function (latlng, layerId) {
-        removeBalloonInfo();
-
-        overlays.clear(true);
-        balloonInfo = popup;
-
-        balloonInfo.setLatLng(latlng);  // todo: получить с учетом deltaXY
-        $("#loader").show();
+    var prepareContent = function (latlng, cadastreLayer) {
+        info.popup
+            .setLatLng(latlng)
+            .fire('loadershow');
         
-        var lmap = nsGmx.leafletMap || gmxAPI._leaflet.LMap;
-        
-        var point = getShiftPointMercator(latlng),
-            mapExtent = getMapExtent(),
-            options = { callbackParamName: 'callback' };
+        var par = utils.getRequestParams('identify', cadastreLayer, latlng);
 
-        L.gmxUtil.requestJSONP(
-            cadastreServer + 'Cadastre/CadastreSelected/MapServer/identify',
-            {
-                f: 'json',
-                geometry: '{"x":' + point.x + ',"y":' + point.y + ',"spatialReference":{"wkid":102100}}',
-                tolerance: '0',
-                returnGeometry: (silent ? 'false' : ''),
-                mapExtent: mapExtent.extent,
-                imageDisplay: mapExtent.size + ',96',
-                geometryType: 'esriGeometryPoint',
-                sr: '102100',
-                layers: layerId || 'top' //top or all or layerId
-            }, options
+        L.gmxUtil.requestJSONP(par.url, par.params, par.options
         ).then(function(data) {
-            if (!($.isEmptyObject(data)) && data.results && data.results.length > 0) {
+            if (data && data.results && data.results.length > 0) {
 
                 var featureSet = [],
                     len = data.results.length;
@@ -1453,11 +1406,10 @@
 
         if (checkCadastreNumber(value)) {
 
-            var lmap = nsGmx.leafletMap || gmxAPI._leaflet.LMap;
-            var cadType = getCadastreType(value);
+            var cadType = getCadastreType(value),
+                lmap = info.layer._map;
 
-            $('#loader').show();
-            $("#alert").hide();
+            info.popup.fire('loadershow');
 
             if (cadType == CadastreTypes.parcel) {
 
@@ -1472,7 +1424,7 @@
                         returnGeometry: 'false'
                     }, { callbackParamName: 'callback' }
                 ).then(function(data) {
-                    $('#loader').hide();
+                    info.popup.fire('loaderhide');
 
                     if (data.features.length == 0) {
                         alert("Не найдено.");
@@ -1484,8 +1436,37 @@
                     lmap.setView(featureExtent.latlng, toZoom);
                     createBalloonInfo(featureExtent.latlng);
                 }, function () {
-                    $('#loader').hide();
-                    $("#alert").show();
+                    info.popup.fire('loaderhide');
+                });
+            } else {
+
+                var cadastreNumber = normalizeSearchCadastreNumber(value);
+
+                L.gmxUtil.requestJSONP(
+                    cadType.layerUrl + '/query?' + 'where=' + encodeURIComponent(cadType.fieldId + " like '" + cadastreNumber + "%'"),
+                    {
+                        f: 'json',
+                        returnGeometry: true,
+                        spatialRel: "esriSpatialRelIntersects",
+                        outFields: "*",
+                        outSR: '4326'
+                    }, { callbackParamName: 'callback' }
+                ).then(function(data) {
+                    info.popup.fire('loaderhide');
+                    removeBalloonInfo();
+                    overlays.clear(true);
+
+                    if (data.features.length == 0) {
+                        alert("Не найдено.");
+                        return;
+                    }
+                    var featureExtent = utils.getFeatureExtent(data.features[0].attributes);
+                    lmap.fitBounds(featureExtent.latLngBounds, {animate: false});
+
+                    showInfoWindow(cadType, data);
+
+                }, function () {
+                    info.popup.fire('loaderhide');
                 });
             }
         }
@@ -1493,210 +1474,6 @@
     window.parentCadastreNumberClick = function(arg) {
         //console.log('parentCadastreNumberClick', arg );
         cadastreSearch(arg);
-    };
-
-    var b = [
-        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAMAAACelLz8AAAAAXNSR0IB2cksfwAAABhQTFRF/v',
-        '/////////VylQyAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAALklEQVQokWNgIBMwsmABTGApFnY2DMDOApFiY8UAbKNSw00KdwJgwpZsmMlNhADmvglpoglhjgAAAABJRU5ErkJggg==',
-        '///sO7/rSq/6KU'
-    ];
-    var thematicLayers = [
-        {
-            id: 'rbCostLayer',
-            layerId: '1,7',
-            legend: 'Кадастровая стоимость</br><table cellspacing="0" cellpadding="0"><tbody><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY9fUA9usA9+EAPCcsfQAAAAh0Uk5TAP' + b[1] + '"></td><td><span>до 3 млн руб.</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY9bgA9rEA96kAxLzpJgAAAAh0Uk5TAP' + b[1] + '"></td><td><span>3 - 15 млн. руб.</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY9XsA9ngA93UA+R2pSwAAAAh0Uk5TAP' + b[1] + '"></td><td><span>15 - 30 млн. руб.</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY9T0A9kAA90IAF7kxUgAAAAh0Uk5TAP' + b[1] + '"></td><td><span>30 - 100 млн.руб.</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY9QAA9hIA9yQAeAUndAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>свыше 100 млн. руб.</span></td></tr></tbody></table',
-            title: 'Кадастровая стоимость',
-            startLevel: 13,
-            endLevel: 20
-        },
-        {
-            id: 'rbCostByAreaLayer',
-            layerId: '0,6',
-            legend: 'Кадастровая стоимость ЗУ за кв. м</br><table cellspacing="0" cellpadding="0" style="width: 203px;"><tbody><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY9fUA9usA9+EAPCcsfQAAAAh0Uk5TAP' + b[1] + '"></td><td><table width="95%"><tbody><tr><td align="">до 100 руб за кв. м</td></tr></tbody></table></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY9bgA9rEA96kAxLzpJgAAAAh0Uk5TAP' + b[1] + '"></td><td><table width="95%"><tbody><tr><td align="">от 101 до 1000 руб. за кв. м</td></tr></tbody></table></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY9XsA9ngA93UA+R2pSwAAAAh0Uk5TAP' + b[1] + '"></td><td><table width="95%"><tbody><tr><td align="">от 1001 до 5000 руб. за кв. м</td></tr></tbody></table></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY9T0A9kAA90IAF7kxUgAAAAh0Uk5TAP' + b[1] + '"></td><td><table width="95%"><tbody><tr><td align="">от 5001 до 50000 руб. за кв. м</td></tr></tbody></table></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY9QAA9hIA9yQAeAUndAAAAAh0Uk5TAP' + b[1] + '"></td><td><table width="95%"><tbody><tr><td align="">более 500000 руб. за кв. м</td></tr></tbody></table></td></tr></tbody></table>',
-            title: 'Кадастровая стоимость за метр',
-            startLevel: 13,
-            endLevel: 20
-        },
-        {
-            id: 'rbUseType',
-            layerId: '2,4',
-            legend: 'Разрешенные виды использования ЗУ</br><table cellspacing="0" cellpadding="0"><tbody><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY/wAA/xIA/yQAxDetmgAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли с более чем одним видом использования</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY/9if/+Kn/+ywWIVZzQAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли жилой застройки</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY/8Jy/8t6/9N/nGNq1QAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли под жилыми домами многоэтажной и повышенной этажности застройки</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY/50A/6MA/6kA0zjLGAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли под домами индивидуальной жилой застройкой</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY5pkA6ZMA7I4A5xrHhAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Незанятые земли, отведенные под жилую застройку</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY/+ms//S1//++G44kQgAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли общественно-деловой застройки</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY/+ln//Ru//90X3D6BQAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли гаражей и автостоянок</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY/+kA//QA//8AnfC9ewAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли под объектами торговли, общественного питания, бытового обслуживания, автозаправочными и газонаполнительными станциями, предприятиями автосервиса</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY5uYA6d0A7NMAeryBiQAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли учреждений и организаций народного образования, земли под объектами здравоохранения и социального обеспечения физической культуры и спорта, культуры и искусства, религиозными объектами</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYqKgAtKIAvZwAgfbyuQAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли под административно-управленческими и общественными объектами, земли предприятий, организаций, учреждений финансирования, кредитования, страхования и пенсионного обеспечения</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYdHQAinEAnW4AzJWFTAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли под зданиями (строениями) рекреации</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY5pkA6ZMA7I4A5xrHhAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли под объектами промышленности</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYqG8AtGwAvWoA5VasFgAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли общего пользования (геонимы в поселениях)</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY4eHh5NjX58/MBsJpUwAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли под объектами транспорта, связи, инженерных коммуникаций</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYzc3N0sXD2Ly5WqFGdQAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Под объектами железнодорожного транспорта</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYs7OzvKyqxaWhGy20FAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Под объектами автомобильного транспорта</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYnZ2dqpiWtpKN7dt9hwAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Под объектами морского, внутреннего водного транспорта</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYgoKClX98pnt2xUDwLQAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Под объектами воздушного транспорта</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYZ2dngmZjl2RdEF9uXAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Под объектами иного транспорта, связи, инженерных коммуникаций</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZY0/++2fS13emsMMNQhAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли сельскохозяйственного использования</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYo/90sPRuu+lnNk+fNAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли под крестьянскими (фермерскими) хозяйствами</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYVf8AdvQAjukAJrp/BQAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли под предприятиями, занимающимися сельскохозяйственным производством</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYTeYAcd0AitMAoSK+BAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли под садоводческими объединениями и индивидуальными садоводами</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYN6gAZqIAhJwA4JYcbQAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли под огородническими объединениями и индивидуальными огородниками</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYJHQAYHEAf24Ao374EAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли под дачными объединениями</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYtdefvs6XxsWPI51NXAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли под личными подсобными хозяйствами</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYpfV7set1u+FuPSy7WwAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли под служебными наделами</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYiM5mmsZhqb1bRGITZwAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли оленьих пастбищ</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYW4hFeoVCkYA9J56HwAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Для других сельскохозяйственных целей</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYTXQAcXEAim4AKDuv6gAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли под лесами в поселениях (в том числе городскими лесами), под древесно-кустарниковой растительностью, не входящей в лесной фонд (в том числе лесопарками, парками, скверами, бульварами)</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYAMX/WL3ze7Xn/71NNgAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли, занятые водными объектами, земли водоохранных зон водных объектов, а также земли, выделяемые для установления полос отвода и зон охраны водозаборов, гидротехнических сооружений и иных водохозяйственных сооружений, объектов.</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAMAAACelLz8AAAAAXNSR0IB2cksfwAAAC1QTFRF/v///vTz2dra5tva2c3L/sO7/rSqlJSUqJaU/6KUlH58lF9Y/3ZYAAAAeyQA0xTD0AAAAA90Uk5TAP//////////////////5Y2epgAAAAlwSFlzAAAOxAAADsQBlSsOGwAAAHdJREFUKJGd0ksOgCAQA9DhIyAi9z+uiTYyZVjRVZMXFg0jspmjLZJealdwX2pBib19FPA8ZxR/R5Az4h2RFiEiIWLRNImiWQYZ+akakQIqRnLlyUoyT9bCk0mIWDRNomiWQUZ+ikYkgHrEv5eKEnAAaXU2p2zmAUZoBsjYet62AAAAAElFTkSuQmCC"></td><td><span>Земли, не вовлеченные в градостроительную или иную деятельность (земли &ndash; резерв)</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYlUu6pE2ysU2ogM8VNAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли под военными и иными режимными объектами</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + b[2] + '/3ZYx00zzk0w008r5GEnuAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли под объектами иного специального назначения</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAMAAACelLz8AAAAAXNSR0IB2cksfwAAABhQTFRF/v///sO7/rSq/6KU/3ZY/+nn//Tz////4iZzJgAAAAh0Uk5TAP/////////VylQyAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAALklEQVQokWNgIBMwsmABTGApFlY2DMDKApFiY8cAbKNSw00KdwJgwpZsmMlNhABUegvpjanC7gAAAABJRU5ErkJggg=="></td><td><span>Неопределено</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAMAAACelLz8AAAAAXNSR0IB2cksfwAAABhQTFRF/v///sO7/rSq/6KU/3ZY/+nn//Tz////4iZzJgAAAAh0Uk5TAP/////////VylQyAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAALklEQVQokWNgIBMwsmABTGApFlY2DMDKApFiY8cAbKNSw00KdwJgwpZsmMlNhABUegvpjanC7gAAAABJRU5ErkJggg=="></td><td><span>Значение отсутствует</span></td></tr></tbody></table>',
-            title: 'Виды разрешенного использования',
-            startLevel: 13,
-            endLevel: 20
-        },
-        {
-            id: 'rbCategory',
-            layerId: '3,5',
-            legend: 'Категории земель ЗУ</br><table cellspacing="0" cellpadding="0"><tbody><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//8MO77bSq6qKU5HZYAG//TWzza2rnJL3s7wAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли водного фонда</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//8MO77bSq6qKU5HZYtGokuWkkvWYfu6YNWgAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли запаса</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//8MO77bSq6qKU5HZYVf8AbvQAgekA3+ZdMgAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли лесного фонда</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//8MO77bSq6qKU5HZYJHQAVnEAcW4AZkbUVgAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли особо охраняемых территорий и объектов</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//8MO77bSq6qKU5HZY+Z0A/KMA/6kAOzMlwAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли поселений (земли населенных пунктов)</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//8MO77bSq6qKU5HZYdE0AhU0Akk8AWdadagAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли промышленности, энергетики, транспорта, связи, радиовещания, телевидения, информатики, земли для обеспечения космической деятельности, земли обороны, безопасности и земли иного специального назначения</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//8MO77bSq6qKU5HZY6Oms6PS16f++yNID5wAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Земли сельскохозяйственного назначения</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//8MO77bSq6qKU5HZYs7OzuKyqvaWhx9sqFgAAAAh0Uk5TAP' + b[1] + '"></td><td><span>Категория не установлена</span></td></tr></tbody></table>',
-            title: 'Категории земель',
-            startLevel: 13,
-            endLevel: 20
-        },
-        {
-            id: 'rbMapUpdate',
-            layerId: '8',
-            legend: 'Актуальность сведений</br><table cellspacing="0" cellpadding="0"><tbody><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//x8fHubq6qaqqhIWFN6gAQKMfR58wW5lrlgAAAAh0Uk5TAP' + b[1] + '"></td><td><span>менее 1 недели</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//x8fHubq6qaqqhIWFh8IwiMofi9EAQ7oGzAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>1 - 2 недели</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//x8fHubq6qaqqhIWFv9wwxuUfzu4A5y7xwQAAAAh0Uk5TAP' + b[1] + '"></td><td><span>2 недели - 1 месяц</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//x8fHubq6qaqqhIWF674w9cYf/80AxdGebAAAAAh0Uk5TAP' + b[1] + '"></td><td><span>1 - 3 месяца</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//x8fHubq6qaqqhIWF63ww9X4f/38ACxZRyQAAAAh0Uk5TAP' + b[1] + '"></td><td><span>3 месяца - 1 год</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//x8fHubq6qaqqhIWF6zAw9R8f/wAAedG9rwAAAAh0Uk5TAP' + b[1] + '"></td><td><span>более 1 года</span></td></tr></tbody></table>',
-            title: 'Актуальность сведений',
-            startLevel: 2,
-            endLevel: 20
-        },
-        {
-            id: 'rbMapVisitors',
-            layerId: '9',
-            legend: 'Общее количество посещений</br><table cellspacing="0" cellpadding="0"><tbody><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0"src="' + b[0] + '//x8fHubq6qaqqhIWF676+9cbG/83No3FH3QAAAAh0Uk5TAP' + b[1] + '"></td><td><span>менее 100 000</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//x8fHubq6qaqqhIWF656U9aOZ/6eccAhG3wAAAAh0Uk5TAP' + b[1] + '"></td><td><span>100 000 - 500 000</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//x8fHubq6qaqqhIWF6YBu84Ju/YVuMQ3iHgAAAAh0Uk5TAP' + b[1] + '"></td><td><span>500 000 - 1 000 000</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//x8fHubq6qaqqhIWF4mNR7GFL9WBHhZwXygAAAAh0Uk5TAP' + b[1] + '"></td><td><span>1 000 000 - 5 000 000</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//x8fHubq6qaqqhIWF10k94EUw6D0k9XeHogAAAAh0Uk5TAP' + b[1] + '"></td><td><span>5 000 000 - 10 000 000</span></td></tr><tr><td class=cadastreLegendImageColumn><img class=cadastreLegendImage border="0" src="' + b[0] + '//x8fHubq6qaqqhIWFzDAw1B8f3AAAabp87wAAAAh0Uk5TAP' + b[1] + '"></td><td><span>более 10 000 000</span></td></tr></tbody></table>',
-            title: 'Общее количество посещений',
-            startLevel: 2,
-            endLevel: 20
-        }
-    ];
-    var Cadastre = function (container, addInfoTools) {
-        var lmap = nsGmx.leafletMap || gmxAPI._leaflet.LMap;
-        var cadastreLegend;
-
-        fnRefreshMap = function () {
-            $("#alert").hide();
-
-            $(cadastreLegend).toggle(!rbNo.checked);
-
-            var thmtChecked = null;
-            for (var i = 0, len = thematicLayers.length; i < len; i++) {
-                if (thematicLayers[i].radio.checked) {
-                    thmtChecked = thematicLayers[i];
-                    break;
-                }
-            }
-
-            if (thmtChecked) {
-                $("#loader").show();
-                cadastreLegend.innerHTML = thmtChecked.legend;
-                overlays.setThematicOverlay(thmtChecked);
-            } else {
-                overlays.clear(true, 'thematicOverlay');
-            }
-        };
-
-        var cbDivision, rbNo, rbCostLayer, rbCostByAreaLayer, rbUseType, rbCategory, rbMapUpdate, rbMapVisitors;
-        var div = _div(null, [['dir', 'className', 'cadastreLeftMenuContainer']]);
-        var trs = [];
-
-        trs.push(_tr([_td([_span([_t("Поиск по кадастровому номеру")], [['dir', 'className', 'cadastreLeftMenuLabel']])], [['attr', 'colspan', 2]])]));
-
-        var inputField = inputCadNum = _input(null, [['dir', 'className', 'inputStyle'], ['css', 'width', '200px'], ['attr', 'value', '66:41:0402004:16']]);
-
-        inputField.onkeydown = function (e) {
-            var evt = e || window.event;
-            if (getkey(evt) == 13) {
-                cadastreSearch(inputField.value);
-                return false;
-            }
-        }
-
-        var goButton = makeButton(_gtxt('cadastrePlugin.doSearch')),
-            _this = this;
-
-        goButton.onclick = function () { cadastreSearch(inputField.value); }
-
-        trs.push(_tr([_td([inputField], [['attr', 'colspan', 2]]), _td([goButton])]));
-        trs.push(_tr([_td([], [['attr', 'height', 15]])]));
-
-        rbNo = _radio([['attr', 'name', 'Zones'], ['attr', 'checked', 'true'], ['attr', 'id', 'rbNo']]);
-        rbNo.onclick = fnRefreshMap;
-        trs.push(_tr([_td([rbNo]), _td([_label([_t("Нет тематической карты")], [['attr', 'for', 'rbNo'], ['dir', 'className', 'cadastreLeftMenuLabel']])])], [['dir', 'className', 'cadastreLeftMenuRow']]));
-
-        thematicLayers.map(function (it) {
-            it.radio = _radio([['attr', 'name', 'Zones'], ['attr', 'id', it.id]]);
-            it.radio.onclick = fnRefreshMap;
-            it.tr = _tr([_td([it.radio]), _td([_label([_t(it.title)], [['attr', 'for', it.id], ['dir', 'className', 'cadastreLeftMenuLabel']])])], [['dir', 'className', 'cadastreLeftMenuRow']]);
-            trs.push(it.tr);
-        });
-
-        this.load = function () {
-            fnRefreshMap();
-        }
-
-        var cadastreLegend = _div();
-        var alertDiv = _div(null, [['attr', 'id', "alert"]]);
-        $(alertDiv).css({ "color": "red", "font-weight": "bold", "font-size": "12px", "display": "none" });
-        $(alertDiv).append("Ошибка получения данных!");
-        _(div, [_table([_tbody(trs)]), cadastreLegend, alertDiv]);
-
-        container && _(container, [div]);
-
-        this.unloadCadastre = function () {
-
-            if (dialog)
-                $(dialog).dialog('close');
-
-            $("#loader").hide();
-            overlays.clear(true);
-
-            infoClickSelected = false;
-
-            removeBalloonInfo();
-            inputCadNum.value = '66:41:0402004:16';
-        }
-
-        this.setCadastreVisibility = function (isVisible) {
-            fnRefreshMap();
-        }
-    };
-
-    function onCadastreLayerClick(ev) {
-        //console.log('onCadastreLayerClick', infoClickSelected);
-
-        if (!infoClickSelected) {
-            return;
-        }
-        overlays.clear(true);
-        createBalloonInfo(ev.latlng, "");
-    };
-
-    var getMapExtent = function() {
-        var lmap = nsGmx.leafletMap || gmxAPI._leaflet.LMap,
-            zoom = lmap.getZoom(),
-            mInPixel = 256 / L.gmxUtil.tileSizes[zoom],
-            pos = lmap.getCenter(),
-            shiftY = L.CRS.EPSG3857.project(pos).y - lmap.options.crs.project(pos).y - deltaXY.y,
-            bounds = lmap.getPixelBounds(),
-            ne = lmap.options.crs.project(lmap.unproject(bounds.getTopRight())),
-            sw = lmap.options.crs.project(lmap.unproject(bounds.getBottomLeft()));
-
-        sw.y += shiftY;
-        ne.y += shiftY;
-        sw.x -= deltaXY.x;
-        ne.x -= deltaXY.x;
-
-        var size = {
-            x: bounds.max.x - bounds.min.x,
-            y: (ne.y - sw.y) * mInPixel
-        };
-        return {
-            size: size.x + ',' + size.y,
-            shiftY: shiftY,
-            bbox: [sw.x, sw.y, ne.x, ne.y].join(','),
-            extent: '{"xmin":' + sw.x + ',"ymin":' + sw.y + ',"xmax":' + ne.x + ',"ymax":' + ne.y + ',"spatialReference":{"wkid":102100}}'
-        };
-    };
-    var getShiftPointMercator = function(latlng) {
-        return L.CRS.EPSG3857.project(latlng).subtract(deltaXY);
-    };
-    var getShiftPointLatlng = function(latlng) {
-        var mPoint = getShiftPointMercator(latlng),
-            crs = L.Projection.SphericalMercator;
-        return crs.unproject(mPoint.divideBy(6378137));
-    };
-    var getFeatureExtent = function(attr) {
-        var R = 6378137,
-            crs = L.Projection.SphericalMercator;
-        
-        return {
-            latlng: crs.unproject(L.point(attr.XC, attr.YC).divideBy(R)),
-            latLngBounds: L.latLngBounds(
-                crs.unproject(L.point(attr.XMIN, attr.YMIN).divideBy(R)),
-                crs.unproject(L.point(attr.XMAX, attr.YMAX).divideBy(R))
-            )
-        };
     };
 
     var hideOverlays = false;
@@ -1720,7 +1497,7 @@
         },
 
         clear: function(allFlag, type) {
-            var lmap = nsGmx.leafletMap || gmxAPI._leaflet.LMap,
+            var lmap = info.layer._map,
                 key = type || 'infoOverlay',
                 data = overlays[key],
                 len = data.arr.length - (allFlag ? 0 : 1);
@@ -1742,7 +1519,7 @@
             } else {
                 overlays[type].lastAttr = attr;
             }
-            var lmap = nsGmx.leafletMap || gmxAPI._leaflet.LMap;
+            var lmap = info.layer._map,
                 hide = hideOverlays;
 
             if (!hide && attr.startLevel && attr.endLevel) {
@@ -1759,12 +1536,12 @@
                     data.arr[len].onRemove(lmap);
                 }
 
-                $("#loader").hide();
+                info.popup.fire('loaderhide');
                 return;
             }
-            var mapExtent = getMapExtent(),
+            var mapExtent = utils.getMapExtent(info.layer),
                 layerId = attr.layerId,
-                zIndex = 98;
+                zIndex = info.layer.options.zIndex - 2;
                 
             var params = L.Util.extend(overlays.params, {
                 layers: 'show:' + layerId,
@@ -1779,18 +1556,17 @@
                     '{"' + layerId + '":"' + fieldId + ' LIKE \'' + attr.value + '\'"}'
                     : layerId + ':' + fieldId + ' LIKE \'' + attr.value + '\''
                 ;
-                zIndex = 99;
+                zIndex++;
             }
 
             for (var key in params) {
                 imageUrl += '&' + key + '=' + params[key];
             }
 
-            var lmap = nsGmx.leafletMap || gmxAPI._leaflet.LMap;
             overlays[type].arr.push(new L.ImageOverlay.Pane(imageUrl, lmap.getBounds())
                 .on('load', function() {
                     overlays.clear(false, type);
-                    $("#loader").hide();
+                    info.popup.fire('loaderhide');
                 })
                 .addTo(lmap)
                 .setZIndex(zIndex)
@@ -1815,6 +1591,117 @@
         }
     };
 
-    L.Cadastre.Info = {
+    var cadastreServer = 'http://maps.rosreestr.ru/arcgis/rest/services/';
+    var utils = {
+        getRequestParams: function(type, layer, latlng) {
+            var out = {
+                options: { callbackParamName: 'callback' }
+            };
+            if (type === 'identify') {
+                var point = utils.getShiftPointMercator(latlng, layer.options.shiftPosition),
+                    mapExtent = utils.getMapExtent(layer);
+
+                out.url = cadastreServer + 'Cadastre/CadastreSelected/MapServer/identify';
+                out.params = {
+                    f: 'json',
+                    geometry: '{"x":' + point.x + ',"y":' + point.y + ',"spatialReference":{"wkid":102100}}',
+                    tolerance: '0',
+                    returnGeometry: (silent ? 'false' : ''),
+                    mapExtent: mapExtent.extent,
+                    imageDisplay: mapExtent.size + ',96',
+                    geometryType: 'esriGeometryPoint',
+                    sr: '102100',
+                    layers: 'top'
+                };
+            }
+            return out;
+        },
+
+        getMapExtent: function(cadastreLayer) {
+            var lmap = cadastreLayer._map,
+                shiftPosition = cadastreLayer.options.shiftPosition,
+                mInPixel = 256 / L.gmxUtil.tileSizes[lmap.getZoom()],
+                pos = lmap.getCenter(),
+                shiftY = L.CRS.EPSG3857.project(pos).y - lmap.options.crs.project(pos).y - shiftPosition.y,
+                bounds = lmap.getPixelBounds(),
+                ne = lmap.options.crs.project(lmap.unproject(bounds.getTopRight())),
+                sw = lmap.options.crs.project(lmap.unproject(bounds.getBottomLeft()));
+
+            sw.y += shiftY;
+            ne.y += shiftY;
+            sw.x -= shiftPosition.x;
+            ne.x -= shiftPosition.x;
+
+            var size = {
+                x: bounds.max.x - bounds.min.x,
+                y: (ne.y - sw.y) * mInPixel
+            };
+            return {
+                size: size.x + ',' + size.y,
+                shiftY: shiftY,
+                bbox: [sw.x, sw.y, ne.x, ne.y].join(','),
+                extent: '{xmin:' + sw.x + ',ymin:' + sw.y + ',xmax:' + ne.x + ',ymax:' + ne.y + ',spatialReference:{wkid:102100}}'
+            };
+        },
+
+        getShiftPointMercator: function(latlng, shiftPosition) {
+            return L.CRS.EPSG3857.project(latlng).subtract(shiftPosition);
+        },
+
+        getShiftPointLatlng: function(latlng) {
+            var mPoint = getShiftPointMercator(latlng),
+                crs = L.Projection.SphericalMercator;
+            return crs.unproject(mPoint.divideBy(6378137));
+        },
+
+        getFeatureExtent: function(attr) {
+            var R = 6378137,
+                crs = L.Projection.SphericalMercator;
+            
+            return {
+                latlng: crs.unproject(L.point(attr.XC, attr.YC).divideBy(R)),
+                latLngBounds: L.latLngBounds(
+                    crs.unproject(L.point(attr.XMIN, attr.YMIN).divideBy(R)),
+                    crs.unproject(L.point(attr.XMAX, attr.YMAX).divideBy(R))
+                )
+            };
+        }
     };
+
+    var info = {
+        layer: null,
+        loaderIcon: {
+            request: {
+            },
+            icon: {
+            }
+        },
+
+        popup: L.popup({minWidth: 400}),
+
+        closePopup: function(ev) {
+            overlays.clear(true);
+        },
+
+        removePopup: function(ev) {
+            overlays.clear(true);
+            if (this._map) {
+                this._map.removeLayer(info.popup);
+            }
+        },
+
+        setPopup: function(ev) {
+            info.layer = this;
+            info.popup.setLatLng(ev.latlng);
+
+            prepareContent(ev.latlng, this);
+        }
+    };
+    info.popup.on('close', info.closePopup);
+
+    L.Cadastre = L.Cadastre.extend({
+        info: {
+            click: info.setPopup
+        }
+    });
 })();

@@ -12,7 +12,9 @@
     <script src="http://scanex.github.io/Leaflet-GeoMixer/build/leaflet-geomixer-dev.js?key=U92596WMIH"></script>
     <script src="../src/L.ImageOverlay.Pane.js"></script>
     <script src="../src/L.Cadastre.js"></script>
- 
+    <script src="../src/L.Cadastre.Info.js"></script>
+    <link rel="stylesheet" href="../src/L.Cadastre.css" />
+  
     <style>
         html, body, #map {
             height: 100%;
@@ -63,7 +65,7 @@
             zoom: 17
         });
     
-        var cadastreLayer = new L.Cadastre().on('tileerror', function (ev) {
+        var cadastreLayer = new L.Cadastre(null, {infoMode: true}).on('tileerror', function (ev) {
             this.options.errorTileUrl = ev.url + '&';
             console.log('tileerror', ev.url);
         });
@@ -74,7 +76,7 @@
             cadastreLayer: cadastreLayer
             //,
             //Labels: labels
-       }, {collapsed: false}).addTo(map);
+       }, {collapsed: false, autoZIndex: false}).addTo(map);
 
 	</script>
 </body>

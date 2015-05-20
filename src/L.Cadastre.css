@@ -1,0 +1,149 @@
+﻿.leaflet-clickable-raster-layer {
+    cursor: help;
+}
+.pseudoLink {
+	cursor: pointer;
+}
+
+div[title='Кадастр Росреестра']{
+	float: left;
+}
+#loader{
+  display: none;
+  background-image: url(map-loader.gif);
+  background-size: 23px;
+  height: 23px;
+  width: 23px;
+  float: right;
+}
+
+.grey{
+  display: none;
+  background-image: url(map-loader-grey.gif) !important;
+  background-size: 23px;
+  height: 23px;
+  width: 23px;
+  float: right;
+  margin-top: 15px;
+  margin-right: 5px;
+}
+
+.linkList{
+    padding-top: 15px;
+}
+
+.cadastreMapInfoContainer{
+    width: 400px; 
+    max-height: 170px; 
+    overflow-x: hidden; 
+    overflow-y: auto;
+}
+
+
+.mapInfoContainer{
+    width: 400px;
+    max-height: 170px;
+    overflow-y: auto;
+    overflow-x: hidden; 
+}
+
+.emptyRow{
+    height: 3px;
+}
+
+.getGeom{
+    cursor: pointer; 
+    text-decoration: underline;
+    font-size: 12px;
+    padding-top: 14px;
+}
+
+.smallFont{
+    font-size: 11px !important;
+}
+
+.leftColumn {
+    font-size: 12px;
+    padding-bottom: 2px;
+    padding-right: 7px;
+    width: 50% !important;
+}
+
+.leftColumnExt{
+    width: 210px;
+    font-size: 12px;
+}
+
+.leftColumn {
+    font-size: 12px;
+}
+
+.cadastreTitle{
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 7px;
+}
+
+.cadastreLeftMenuLabel
+{
+	margin-Left: 3px;
+}
+.cadastreLeftMenuRow
+{
+	height: 19px;
+}
+.disabledLabel {
+    color: #999;
+}
+
+.cadastreLeftMenuContainer
+{
+	margin: 10px 25px 10px 30px;
+}
+.cadastreLegendImage
+{
+	height: 16px;
+}
+.cadastreLegendImageColumn
+{
+	width: 20px
+}
+.inactive
+{
+	color: #666666;
+}
+/*#tableInfo tr{
+	text-align: left;
+}*/
+
+#tableInfo th {
+     /*background: #ccc;*/
+     text-align: left;
+}
+#tableInfo tbody tr td {
+	padding-left:15px;
+}
+/*#tableInfo td, th {
+     border: 1px solid #800; 
+     padding: 4px; 
+    } */
+
+.leaflet-gmx-icon-cadastreDx{
+    background-image: url("http://new.test2.kosmosnimki.ru/api/leaflet/plugins/gmxControls/dist/css/img/gmxSprite.png");
+    background-position: -145px -59px;
+}
+
+.leaflet-gmx-icon-cadastreDx-active{
+    background-image: url("http://new.test2.kosmosnimki.ru/api/leaflet/plugins/gmxControls/dist/css/img/gmxSprite.png");
+    background-position: -145px -92px;
+}
+
+.leaflet-gmx-icon-cadastreInfo{
+    background-image: url("http://new.test2.kosmosnimki.ru/api/leaflet/plugins/gmxControls/dist/css/img/gmxSprite.png");
+    background-position: -612px -60px;
+}
+
+.leaflet-gmx-icon-cadastreInfo-active{
+    background-image: url("http://new.test2.kosmosnimki.ru/api/leaflet/plugins/gmxControls/dist/css/img/gmxSprite.png");
+    background-position: -612px -92px;
+}

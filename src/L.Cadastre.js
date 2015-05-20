@@ -3,8 +3,11 @@
         includes: L.Mixin.Events,
 
         options: {
+            maxZoom: 19,
+            maxNativeZoom: 18,
             tileSize: 1024,
-            infoMode: true,
+            zIndex: 100,
+            infoMode: false,
             shiftMode: false,
             shiftPosition: L.point(0, 0),      // For shift layer
             template: 'http://{s}.maps.rosreestr.ru/arcgis/rest/services/Cadastre/Cadastre/MapServer/export',
@@ -23,6 +26,10 @@
 
         initialize: function (url, options) {
             this._pixelPoint = L.point(0, 0);
+            this._tileerrorFunc = function (ev) {
+                this.options.errorTileUrl = ev.url + '&';
+            };
+            
             L.TileLayer.WMS.prototype.initialize.call(this, url || this.options.template, options || this.options);
         },
 
@@ -72,52 +79,7 @@
             L.TileLayer.WMS.prototype.redraw.call(this);
             L.DomUtil.setPosition(this._tileContainer, this._pos);
         },
-/*
-        _update: function () {
 
-            if (!this._map) { return; }
-
-            var map = this._map,
-                bounds = map.getPixelBounds(),
-                zoom = map.getZoom(),
-                tileSize = this._getTileSize();
-
-            if (zoom > this.options.maxZoom || zoom < this.options.minZoom) {
-                return;
-            }
-
-            //console.log('_update', this._pixelPoint);
-            var tileBounds = L.bounds(
-                    bounds.min.divideBy(tileSize)._subtract(this._pixelPoint)._floor(),
-                    bounds.max.divideBy(tileSize)._subtract(this._pixelPoint)._floor());
-
-            this._addTilesFromCenterOut(tileBounds);
-
-            if (this.options.unloadInvisibleTiles || this.options.reuseTiles) {
-                this._removeOtherTiles(tileBounds);
-            }
-        },
-
-        repaint: function () {
-            this.options.shiftPosition._add(this._pos);
-            this._pos = L.point(0, 0);
-
-            for (var key in this._tiles) {
-                this.fire('tileunload', {tile: this._tiles[key]});
-            }
-
-            this._tiles = {};
-            this._tilesToLoad = 0;
-
-            this._bgBuffer.innerHTML = '';
-            var front = this._tileContainer;
-            this._tileContainer = this._bgBuffer;
-            this._bgBuffer = front;
-            //this.options.shiftPosition._add(this._pos);
-            L.DomUtil.setPosition(this._tileContainer, this._pos);
-            this._update();
-        },
-*/
         _drag: function (ev) {
             this._pixelPoint = ev.target._newPos;
 
@@ -142,7 +104,6 @@
                     this._draggable = new L.Draggable(this._tileContainer, this._container);
                 }
                 this._draggable
-                    //.on('dragend', this._update, this)
                     .on('drag', this._drag, this);
                 this._draggable.enable();
                 this.fire('dragstart');
@@ -161,7 +122,6 @@
                 map.off('zoomstart', this.redraw, this);
                 this._draggable.disable();
                 this._draggable
-                    //.off('dragend', this._update, this)
                     .off('drag', this._drag, this);
                 this.fire('dragstop');
                 this.redraw();
@@ -169,19 +129,43 @@
             return this;
         },
 
-        // enableShiftMode: function () {
-            // return this;
-        // },
+        onRemove: function (map) {
+            L.TileLayer.WMS.prototype.onRemove.call(this, map);
+            this.off('tileerror', this._tileerrorFunc, this);
+            if (this._map) {
+                this._map.off('click', this._click, this);
+            }
+        },
 
-        // disableShiftMode: function () {
-            // return this;
-        // },
+        onAdd: function (map) {
+            L.TileLayer.WMS.prototype.onAdd.call(this, map);
+            this.setZIndex(this.options.zIndex);
+            this.on('tileerror', this._tileerrorFunc, this);
+            
+            if (this.options.infoMode) {
+                this.enableInfoMode();
+            }
+        },
+
+        _setAutoZIndex: function (pane, compare) {  // we don't want autoZIndex
+        },
 
         enableInfoMode: function () {
+            this.options.infoMode = true;
+            if (this._map) {
+                this._map.on('click', this.info.click, this);
+                L.DomUtil.addClass(this.getContainer(), 'leaflet-clickable-raster-layer');
+            }
+            
             return this;
         },
 
         disableInfoMode: function () {
+            this.options.infoMode = false;
+            if (this._map) {
+                this._map.off('click', this.info.click, this);
+                L.DomUtil.removeClass(this.getContainer(), 'leaflet-clickable-raster-layer');
+            }
             return this;
         }
     });
