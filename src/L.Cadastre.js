@@ -8,7 +8,7 @@
             tileSize: 1024,
             zIndex: 100,
             infoMode: false,
-            shiftMode: false,
+            dragMode: false,
             shiftPosition: L.point(0, 0),      // For shift layer
             template: 'http://{s}.maps.rosreestr.ru/arcgis/rest/services/Cadastre/Cadastre/MapServer/export',
             attribution: '<a href="http://rosreestr.ru">© Росреестр</a>'
@@ -27,6 +27,9 @@
         initialize: function (url, options) {
             this._pixelPoint = L.point(0, 0);
             this._tileerrorFunc = function (ev) {
+                this.options.errorTileUrl = ev.url + '&';
+            };
+            this._stopClick = function (ev) {
                 this.options.errorTileUrl = ev.url + '&';
             };
             
@@ -93,6 +96,7 @@
         },
 
         enableDrag: function () {
+            this.options.dragMode = true;
             if (this._map) {
                 var map = this._map;
 
@@ -101,17 +105,27 @@
                 map.on('zoomstart', this.redraw, this);
                 L.DomUtil.setPosition(this._tileContainer, L.point(0, 0));
                 if (!this._draggable) {
+                    var _this = this;
                     this._draggable = new L.Draggable(this._tileContainer, this._container);
+                    this._draggable
+                        .on('dragstart', function () {
+                            this.fire('dragstart');
+                            this._dragstate = true;
+                        }, this)
+                        .on('dragend', function () {
+                            this.fire('dragend');
+                            setTimeout(function () { _this._dragstate = false; }, 0);
+                        }, this)
+                        .on('drag', this._drag, this);
                 }
-                this._draggable
-                    .on('drag', this._drag, this);
                 this._draggable.enable();
-                this.fire('dragstart');
             }
+            this.fire('dragenabled');
             return this;
         },
 
         disableDrag: function () {
+            this.options.dragMode = false;
             if (this._map) {
                 var map = this._map;
                 this.options.shiftPosition._add(this._pos);
@@ -121,11 +135,9 @@
                 L.DomUtil.enableImageDrag();
                 map.off('zoomstart', this.redraw, this);
                 this._draggable.disable();
-                this._draggable
-                    .off('drag', this._drag, this);
-                this.fire('dragstop');
                 this.redraw();
             }
+            this.fire('dragdisabled');
             return this;
         },
 
@@ -144,6 +156,9 @@
             
             if (this.options.infoMode) {
                 this.enableInfoMode();
+            }
+            if (this.options.dragMode) {
+                this.enableDrag();
             }
         },
 

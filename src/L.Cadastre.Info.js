@@ -503,14 +503,8 @@
         query.outFields = "ONLINE_ACTUAL_DATE,ACTUAL_DATE";
         query.f = "json";
 
-        L.gmxUtil.requestJSONP(
-            CadastreTypes.okrug.layerUrl + "/query",
-            {
-                f: 'json',
-                where: FIELDS.cadastreOkrugId + " like '" + okrugNumber + "%'",
-                returnGeometry: false,
-                outFields: 'ONLINE_ACTUAL_DATE,ACTUAL_DATE'
-            }, options
+        var par = utils.getRequestParams('okrug', CadastreTypes.okrug, {where: FIELDS.cadastreOkrugId + " like '" + okrugNumber + "%'"});
+        L.gmxUtil.requestJSONP(par.url, par.params, par.options
         ).then(function(featureSet) {
             // var attrDate = null;
             // var borderDate = null;
@@ -1004,17 +998,17 @@
     };
 
     var dx, dy, map;
-    var deltaXY = L.point(0, 0);
+    //var deltaXY = L.point(0, 0);
     var balloonInfo; // balloon для идентификации и поиска кадастрового участка на карте
     var geometry;// геометрия выделенного участка
-    var cadastreServer;
-    var cadastreServerThematic;
-    var dialog, inputCadNum;
-    var geometryRequest = null;
-    var checkCadastre;
-    var gParams = null;
-    var infoClickSelected = false;
-    var cadastreDxSelected = false;
+    // var cadastreServer;
+    // var cadastreServerThematic;
+    // var dialog, inputCadNum;
+    // var geometryRequest = null;
+    // var checkCadastre;
+    // var gParams = null;
+    // var infoClickSelected = false;
+    // var cadastreDxSelected = false;
     
     var fnRefreshMap = null;
 
@@ -1224,10 +1218,8 @@
         query.f = "json";
         query.returnGeometry = false;
 
-        L.gmxUtil.requestJSONP(
-            objectType.layerUrl,
-            query,
-            {callbackParamName: 'callback'}
+        var par = utils.getRequestParams('other', objectType, query);
+        L.gmxUtil.requestJSONP(par.url, par.params, par.options
         ).then(function(featureSet) {
             showInfoWindow(objectType, featureSet);
         }, function () {
@@ -1236,17 +1228,8 @@
     };
 
     function searchObject(objectType, whereClause) {
-        L.gmxUtil.requestJSONP(
-            objectType.layerUrl + "/query",
-            {
-                f: 'json',
-                geometryType: 'esriGeometryPoint',
-                spatialRel: 'esriSpatialRelIntersects',
-                returnGeometry: false,
-                outFields: '*',
-                where: whereClause
-            },
-            {callbackParamName: 'callback'}
+        var par = utils.getRequestParams('searchObject', objectType, {where: whereClause});
+        L.gmxUtil.requestJSONP(par.url, par.params, par.options
         ).then(function(featureSet) {
             showInfoWindow(objectType, featureSet);
         }, function () {
@@ -1256,13 +1239,6 @@
 
     //окно не  будет показано, данные сохраняются в контейнере
     var silent = false;
-    var removeBalloonInfo = function () {
-        if (balloonInfo) {
-            var lmap = nsGmx.leafletMap || gmxAPI._leaflet.LMap;
-            lmap.removeLayer(balloonInfo);
-            balloonInfo = null;
-        }
-    };
     var requestError = function () {
         info.popup.fire('loaderend');
         if (silent) {
@@ -1276,8 +1252,7 @@
             .setLatLng(latlng)
             .fire('loaderstart');
         
-        var par = utils.getRequestParams('identify', cadastreLayer, latlng);
-
+        var par = utils.getRequestParams('identify', cadastreLayer, {latlng: latlng});
         L.gmxUtil.requestJSONP(par.url, par.params, par.options
         ).then(function(data) {
             if (data && data.results && data.results.length > 0) {
@@ -1415,14 +1390,8 @@
 
                 searchValue = normalizeSearchCadastreNumber(value);
 
-                L.gmxUtil.requestJSONP(
-                    cadType.layerUrl,
-                    {
-                        f: 'json',
-                        cadNum: value,
-                        onlyAttributes: 'false',
-                        returnGeometry: 'false'
-                    }, { callbackParamName: 'callback' }
+                var par = utils.getRequestParams('cadastreSearch', cadType, {cadNum: value});
+                L.gmxUtil.requestJSONP(par.url, par.params, par.options
                 ).then(function(data) {
                     info.popup.fire('loaderend');
 
@@ -1442,19 +1411,11 @@
 
                 var cadastreNumber = normalizeSearchCadastreNumber(value);
 
-                L.gmxUtil.requestJSONP(
-                    cadType.layerUrl + '/query?' + 'where=' + encodeURIComponent(cadType.fieldId + " like '" + cadastreNumber + "%'"),
-                    {
-                        f: 'json',
-                        returnGeometry: true,
-                        spatialRel: "esriSpatialRelIntersects",
-                        outFields: "*",
-                        outSR: '4326'
-                    }, { callbackParamName: 'callback' }
+                var par = utils.getRequestParams('cadastreSearch1', cadType, {where: encodeURIComponent(cadType.fieldId + " like '" + cadastreNumber + "%'")});
+                L.gmxUtil.requestJSONP(par.url, par.params, par.options
                 ).then(function(data) {
                     info.popup.fire('loaderend');
-                    removeBalloonInfo();
-                    overlays.clear(true);
+                    info.removePopup();
 
                     if (data.features.length == 0) {
                         alert("Не найдено.");
@@ -1593,12 +1554,12 @@
 
     var cadastreServer = 'http://maps.rosreestr.ru/arcgis/rest/services/';
     var utils = {
-        getRequestParams: function(type, layer, latlng) {
+        getRequestParams: function(type, layer, extend) {
             var out = {
                 options: { callbackParamName: 'callback' }
             };
             if (type === 'identify') {
-                var point = utils.getShiftPointMercator(latlng, layer.options.shiftPosition),
+                var point = utils.getShiftPointMercator(extend.latlng, layer.options.shiftPosition),
                     mapExtent = utils.getMapExtent(layer);
 
                 out.url = cadastreServer + 'Cadastre/CadastreSelected/MapServer/identify';
@@ -1606,13 +1567,49 @@
                     f: 'json',
                     geometry: '{"x":' + point.x + ',"y":' + point.y + ',"spatialReference":{"wkid":102100}}',
                     tolerance: '0',
-                    returnGeometry: (silent ? 'false' : ''),
+                    returnGeometry: false,
                     mapExtent: mapExtent.extent,
                     imageDisplay: mapExtent.size + ',96',
                     geometryType: 'esriGeometryPoint',
                     sr: '102100',
                     layers: 'top'
                 };
+            } else if (type === 'cadastreSearch1') {
+                out.url = layer.layerUrl + '/query';
+                out.params = L.Util.extend({
+                    f: 'json',
+                    returnGeometry: false,
+                    spatialRel: 'esriSpatialRelIntersects',
+                    outFields: '*',
+                    outSR: '4326'
+                }, extend);
+            } else if (type === 'okrug') {
+                out.url = layer.layerUrl + '/query';
+                out.params = L.Util.extend({
+                    f: 'json',
+                    returnGeometry: false,
+                    outFields: 'ONLINE_ACTUAL_DATE,ACTUAL_DATE'
+                }, extend);
+            } else if (type === 'searchObject') {
+                out.url = layer.layerUrl + '/query';
+                out.params = L.Util.extend({
+                    f: 'json',
+                    returnGeometry: false,
+                    geometryType: 'esriGeometryPoint',
+                    spatialRel: 'esriSpatialRelIntersects',
+                    outFields: '*'
+                }, extend);
+            } else if (type === 'cadastreSearch') {
+                out.url = layer.layerUrl;
+                out.params = L.Util.extend({
+                    f: 'json',
+                    returnGeometry: false,
+                    onlyAttributes: false
+                }, extend);
+            } else {
+                out.url = layer.layerUrl;
+                out.params = L.Util.extend({
+                }, extend);
             }
             return out;
         },
@@ -1691,10 +1688,12 @@
         },
 
         setPopup: function(ev) {
+            //console.log('setPopup');
             info.layer = this;
-            info.popup.setLatLng(ev.latlng);
-
-            prepareContent(ev.latlng, this);
+            if (!this._dragstate) {
+                info.popup.setLatLng(ev.latlng);
+                prepareContent(ev.latlng, this);
+            }
         }
     };
     info.popup.on('close', info.closePopup);
