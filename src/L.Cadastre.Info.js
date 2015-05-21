@@ -1559,7 +1559,7 @@
                 options: { callbackParamName: 'callback' }
             };
             if (type === 'identify') {
-                var point = utils.getShiftPointMercator(extend.latlng, layer.options.shiftPosition),
+                var point = utils.getShiftPointMercator(extend.latlng, layer.getShift()),
                     mapExtent = utils.getMapExtent(layer);
 
                 out.url = cadastreServer + 'Cadastre/CadastreSelected/MapServer/identify';
@@ -1616,7 +1616,7 @@
 
         getMapExtent: function(cadastreLayer) {
             var lmap = cadastreLayer._map,
-                shiftPosition = cadastreLayer.options.shiftPosition,
+                shiftPosition = cadastreLayer.getShift(),
                 mInPixel = 256 / L.gmxUtil.tileSizes[lmap.getZoom()],
                 pos = lmap.getCenter(),
                 shiftY = L.CRS.EPSG3857.project(pos).y - lmap.options.crs.project(pos).y - shiftPosition.y,
