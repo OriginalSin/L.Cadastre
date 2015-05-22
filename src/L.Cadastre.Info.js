@@ -1,21 +1,25 @@
 (function () {
     var CadastreTypes = {
         okrug: {
+            layerId: 4,
             fieldId: "PKK_ID",
             layerUrl: "http://maps.rosreestr.ru/arcgis/rest/services/Cadastre/CadastreSelected/MapServer/4",
             title: "Кадастровый округ"
         },
         kvartal: {
+            layerId: 2,
             fieldId: "PKK_ID",
             layerUrl: "http://maps.rosreestr.ru/arcgis/rest/services/Cadastre/CadastreSelected/MapServer/2",
             title: "Кадастровый квартал"
         },
         rayon: {
+            layerId: 3,
             fieldId: "PKK_ID",
             layerUrl: "http://maps.rosreestr.ru/arcgis/rest/services/Cadastre/CadastreSelected/MapServer/3",
             title: "Кадастровый район"
         },
         parcel: {
+            layerId: 1,
             fieldId: "PARCEL_ID",
             layerUrl: "http://maps.rosreestr.ru/arcgis/rest/services/Cadastre/CadastreSelected/MapServer/exts/GKNServiceExtension/online/parcel/find",
             title: "Parcel"
@@ -966,18 +970,6 @@
         return cadNumber;
     };
 
-    // _translationsHash.addtext("rus", {
-        // cadastrePlugin: {
-            // doSearch: 'Найти'
-        // }
-    // });
-
-    // _translationsHash.addtext("eng", {
-        // cadastrePlugin: {
-            // doSearch: 'Search'
-        // }
-    // });
-
     /*Разсширение для String
     *добавлено для нормазации кадастрового номера 10 -> 0010
     *использование '332'.pad('0', 6); -> '000332' или '332'.pad('0', 6, 1); -> '332000'
@@ -1163,6 +1155,7 @@
         }
     };
 
+    var ctrlKey = false;
     function showInfoWindow(objectType, featureSet) {
         info.popup.fire('loaderend');
 
@@ -1170,7 +1163,7 @@
             lmap = info.layer._map;
         var popup = info.popup;
         if (!silent) {
-            popup.openOn(lmap);
+            if (!ctrlKey) popup.openOn(lmap);
         } else {
             lmap.removeLayer(info.popup);
         }
@@ -1247,12 +1240,12 @@
         }
     };
 
-    var prepareContent = function (latlng, cadastreLayer) {
+    var prepareContent = function (latlng) {
         info.popup
             .setLatLng(latlng)
             .fire('loaderstart');
         
-        var par = utils.getRequestParams('identify', cadastreLayer, {latlng: latlng});
+        var par = utils.getRequestParams('identify', info.layer, {latlng: latlng});
         L.gmxUtil.requestJSONP(par.url, par.params, par.options
         ).then(function(data) {
             if (data && data.results && data.results.length > 0) {
@@ -1400,10 +1393,10 @@
                         return;
                     }
                     findFeature = data.features[0];
-                    var featureExtent = getFeatureExtent(data.features[0].attributes),
+                    var featureExtent = utils.getFeatureExtent(data.features[0].attributes),
                         toZoom = lmap.getBoundsZoom(featureExtent.latLngBounds);
                     lmap.setView(featureExtent.latlng, toZoom);
-                    createBalloonInfo(featureExtent.latlng);
+                    info.setPopup(featureExtent);
                 }, function () {
                     info.popup.fire('loaderend');
                 });
@@ -1411,7 +1404,7 @@
 
                 var cadastreNumber = normalizeSearchCadastreNumber(value);
 
-                var par = utils.getRequestParams('cadastreSearch1', cadType, {where: encodeURIComponent(cadType.fieldId + " like '" + cadastreNumber + "%'")});
+                var par = utils.getRequestParams('cadastreSearch1', cadType, {where: cadType.fieldId + " like '" + cadastreNumber + "%'"});
                 L.gmxUtil.requestJSONP(par.url, par.params, par.options
                 ).then(function(data) {
                     info.popup.fire('loaderend');
@@ -1455,6 +1448,11 @@
         thematicOverlay: {
             lastAttr: null,
             arr: []
+        },
+
+        clearAll: function() {
+            this.clear(true, 'infoOverlay');
+            this.clear(true, 'thematicOverlay');
         },
 
         clear: function(allFlag, type) {
@@ -1688,11 +1686,10 @@
         },
 
         setPopup: function(ev) {
-            //console.log('setPopup');
-            info.layer = this;
-            if (!this._dragstate) {
-                info.popup.setLatLng(ev.latlng);
-                prepareContent(ev.latlng, this);
+            if (!info.layer._dragstate) {
+                ctrlKey = ev.originalEvent.ctrlKey;
+                if (!ctrlKey) info.popup.setLatLng(ev.latlng);
+                prepareContent(ev.latlng);
             }
         }
     };
@@ -1700,7 +1697,13 @@
 
     L.Cadastre = L.Cadastre.extend({
         info: {
-            click: info.setPopup
+            overlays: overlays,
+            click: info.setPopup,
+            removePopup: info.removePopup,
+            cadastreSearch: cadastreSearch,
+            init: function(layer) {
+                info.layer = layer;
+            }
         }
     });
 })();

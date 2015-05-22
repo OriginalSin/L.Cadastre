@@ -25,6 +25,8 @@
         },
 
         initialize: function (url, options) {
+            this.info.init(this);
+            this._pos = L.point(0, 0);
             this._pixelPoint = L.point(0, 0);
             this._tileerrorFunc = function (ev) {
                 this.options.errorTileUrl = ev.url + '&';
@@ -99,7 +101,9 @@
             this.options.dragMode = true;
             if (this._map) {
                 var map = this._map;
-
+                if (this.info) {
+                    this.info.removePopup(true);
+                }
                 map.dragging.disable();
                 L.DomUtil.disableImageDrag();
                 map.on('zoomstart', this.redraw, this);
@@ -142,11 +146,12 @@
         },
 
         onRemove: function (map) {
-            L.TileLayer.WMS.prototype.onRemove.call(this, map);
             this.off('tileerror', this._tileerrorFunc, this);
-            if (this._map) {
-                this._map.off('click', this._click, this);
+            map.off('click', this._click, this);
+            if (this.info) {
+                this.info.overlays.clearAll(true);
             }
+            L.TileLayer.WMS.prototype.onRemove.call(this, map);
         },
 
         onAdd: function (map) {
@@ -167,7 +172,7 @@
 
         enableInfoMode: function () {
             this.options.infoMode = true;
-            if (this._map) {
+            if (this._map && this.info) {
                 this._map.on('click', this.info.click, this);
                 L.DomUtil.addClass(this.getContainer(), 'leaflet-clickable-raster-layer');
             }
@@ -177,7 +182,7 @@
 
         disableInfoMode: function () {
             this.options.infoMode = false;
-            if (this._map) {
+            if (this._map && this.info) {
                 this._map.off('click', this.info.click, this);
                 L.DomUtil.removeClass(this.getContainer(), 'leaflet-clickable-raster-layer');
             }
