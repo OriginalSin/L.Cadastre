@@ -481,6 +481,7 @@
     };
 
     function setDateField(elementId, content) {
+        if (ctrlKey) return;
         var dateField = document.getElementById(elementId);
 
         if (dateField) {
@@ -988,19 +989,6 @@
         }
         return ret;
     };
-
-    var dx, dy, map;
-    //var deltaXY = L.point(0, 0);
-    var balloonInfo; // balloon для идентификации и поиска кадастрового участка на карте
-    var geometry;// геометрия выделенного участка
-    // var cadastreServer;
-    // var cadastreServerThematic;
-    // var dialog, inputCadNum;
-    // var geometryRequest = null;
-    // var checkCadastre;
-    // var gParams = null;
-    // var infoClickSelected = false;
-    // var cadastreDxSelected = false;
     
     var fnRefreshMap = null;
 
