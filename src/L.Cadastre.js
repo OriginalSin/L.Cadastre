@@ -167,7 +167,7 @@
             }
         },
 
-        _setAutoZIndex: function (pane, compare) {  // we don't want autoZIndex
+        _setAutoZIndex: function () {  // we don't want autoZIndex
         },
 
         enableInfoMode: function () {

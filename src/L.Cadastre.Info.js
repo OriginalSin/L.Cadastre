@@ -379,44 +379,31 @@
     };
 
     function buildInfoWindowTitle(objectType, feature) {
-        switch (objectType) {
-            case CadastreTypes.okrug:
+        if (objectType === CadastreTypes.okrug) {
                 return OBJECT_TYPE_FULL_NAMES[0] + ': ' + feature.attributes[FIELDS.cadastreNumber] + ' - ' + feature.attributes[FIELDS.name];
-                break;
-            case CadastreTypes.rayon:
+        } else if (objectType === CadastreTypes.rayon) {
                 return OBJECT_TYPE_FULL_NAMES[1] + ': ' + feature.attributes[FIELDS.cadastreNumber] + ' - ' + feature.attributes[FIELDS.name];
-                break;
-            case CadastreTypes.kvartal:
+        } else if (objectType === CadastreTypes.kvartal) {
                 return OBJECT_TYPE_FULL_NAMES[2] + ': ' + feature.attributes[FIELDS.cadastreNumber];
-                break;
-            case CadastreTypes.parcel:
+        } else if (objectType === CadastreTypes.parcel) {
                 return OBJECT_TYPE_FULL_NAMES[3] + ': ' + feature.attributes["PARCEL_CN"];
-                break;
-            case CadastreTypes.oks:
+        } else if (objectType === CadastreTypes.oks) {
                 var oksType = OKS_TYPES[feature.attributes[FIELDS.oksType]] ? ' (' + OKS_TYPES[feature.attributes[FIELDS.oksType]] + ')' : '';
-
                 return OBJECT_TYPE_FULL_NAMES[4] + oksType + ': ' + feature.attributes["PARCEL_CN"];
-                break;
         }
     };
 
     function buildInfoWindowContent(objectType, feature) {
-        switch (objectType) {
-            case CadastreTypes.okrug:
+        if (objectType === CadastreTypes.okrug) {
                 return buildCadastreInfoWindowContent(feature);
-                break;
-            case CadastreTypes.rayon:
+        } else if (objectType === CadastreTypes.rayon) {
                 return buildCadastreInfoWindowContent(feature);
-                break;
-            case CadastreTypes.kvartal:
+        } else if (objectType === CadastreTypes.kvartal) {
                 return buildCadastreInfoWindowContent(feature);
-                break;
-            case CadastreTypes.parcel:
+        } else if (objectType === CadastreTypes.parcel) {
                 return buildParcelInfoWindowContent(feature);
-                break;
-            case CadastreTypes.oks:
+        } else if (objectType === CadastreTypes.oks) {
                 return buildOksInfoWindowContent(feature);
-                break;
         }
     };
 
@@ -439,7 +426,7 @@
 
         function obj_merge(obj_first, obj_second) {
             var obj_return = {};
-            for (key in obj_first) {
+            for (var key in obj_first) {
                 if (typeof obj_second[key] !== 'undefined') obj_return[key] = obj_second[key];
                 else obj_return[key] = obj_first[key];
             }
@@ -501,13 +488,6 @@
     };
 
     function searchOkrugDate(okrugNumber) {
-        var query = {},
-            options = { callbackParamName: 'callback' };
-        query.where = FIELDS.cadastreOkrugId + " like '" + okrugNumber + "%'";
-        query.returnGeometry = false;
-        query.outFields = "ONLINE_ACTUAL_DATE,ACTUAL_DATE";
-        query.f = "json";
-
         var par = utils.getRequestParams('okrug', CadastreTypes.okrug, {where: FIELDS.cadastreOkrugId + " like '" + okrugNumber + "%'"});
         L.gmxUtil.requestJSONP(par.url, par.params, par.options
         ).then(function(featureSet) {
@@ -990,25 +970,25 @@
         return ret;
     };
     
-    var fnRefreshMap = null;
+    // var fnRefreshMap = null;
 
-    var test = function (value) {
-        if (value == null || value == "Null")
-            value = "";
-        return value;
-    };
+    // var test = function (value) {
+        // if (value == null || value == "Null")
+            // value = "";
+        // return value;
+    // };
 
-    var parseDate = function (milliseconds) {
-        var parseString = "";
-        var date = new Date(milliseconds);
-        if (date) {
-            var theyear = date.getFullYear();
-            var themonth = date.getMonth() + 1;
-            var thetoday = date.getDate();
-            parseString = thetoday + "." + themonth + "." + theyear;
-        }
-        return parseString;
-    }
+    // var parseDate = function (milliseconds) {
+        // var parseString = "";
+        // var date = new Date(milliseconds);
+        // if (date) {
+            // var theyear = date.getFullYear();
+            // var themonth = date.getMonth() + 1;
+            // var thetoday = date.getDate();
+            // parseString = thetoday + "." + themonth + "." + theyear;
+        // }
+        // return parseString;
+    // }
     function getObjectIdField(objectType) {
         switch (objectType) {
             case CadastreTypes.okrug:
@@ -1032,12 +1012,7 @@
         }
     };
 
-    //заменяет все вхождения подстроки в строке
-    function replaceAll(src, str1, str2, ignore) {
-        return src.replace(new RegExp(str1.replace(/([\,\!\\\^\$\{\}\[\]\(\)\.\*\+\?\|\<\>\-\&])/g, function (c) { return "\\" + c; }), "g" + (ignore ? "i" : "")), str2);
-    };
-
-    function showResultList(objectType, features, forPrint) {
+    function showResultList(objectType, features) {
         if (objectType == CadastreTypes.okrug ||
             objectType == CadastreTypes.rayon ||
             objectType == CadastreTypes.kvartal ||
@@ -1156,8 +1131,6 @@
             lmap.removeLayer(info.popup);
         }
 
-        var html = "<div style='width: 370px; max-height: 230px; min-height: 150px; overflow-x: auto; overflow-y: auto;'>";
-
         var title = '<div class="cadastreTitle">' + buildInfoWindowTitle(objectType, featureSet.features[0]) + '</div>';
 
         //******************************************************************************************************************************
@@ -1184,8 +1157,7 @@
         //
         //
 
-        var fileName = replaceAll(featureSet.features[0].attributes[FIELDS.cadastreNumber], ":", "_"),
-            fieldId = objectType.fieldId || featureSet.displayFieldName || FIELDS.cadastreNumber;
+        var fieldId = objectType.fieldId || featureSet.displayFieldName || FIELDS.cadastreNumber;
         if (!silent) {
             overlays.setImageOverlay({
                 fieldId: fieldId,
@@ -1291,13 +1263,13 @@
     var counter = 0;
     var pendingsQueue = [];
 
-    function queue(feature) {
-        if (counter >= 1) {
-            pendingsQueue.push(feature);
-        } else {
-            exec(feature);
-        }
-    };
+    // function queue(feature) {
+        // if (counter >= 1) {
+            // pendingsQueue.push(feature);
+        // } else {
+            // exec(feature);
+        // }
+    // };
 
     function exec(feature) {
         counter++;
@@ -1318,7 +1290,7 @@
     };
 
     var checkCadastreNumber = function (searchedText) {
-        var cadastreNumber = "", url;
+        var cadastreNumber = '';
         searchedText = searchedText.trim();
         if (searchedText.lastIndexOf(":") == searchedText.length - 1) {
             searchedText = searchedText.slice(0, -1);
@@ -1662,11 +1634,11 @@
 
         popup: L.popup({minWidth: 400}),
 
-        closePopup: function(ev) {
+        closePopup: function() {
             overlays.clear(true);
         },
 
-        removePopup: function(ev) {
+        removePopup: function() {
             overlays.clear(true);
             if (this._map) {
                 this._map.removeLayer(info.popup);
