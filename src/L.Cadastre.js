@@ -160,7 +160,6 @@
 
         onRemove: function (map) {
             this.off('tileerror', this._tileerrorFunc, this);
-            map.off('click', this._click, this);
             if (this.info) {
                 this.info.overlays.clearAll(true);
             }
