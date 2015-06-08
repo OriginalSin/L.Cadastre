@@ -100,6 +100,7 @@
         enableDrag: function () {
             this.options.dragMode = true;
             if (this._map) {
+                this._chkActive();
                 var map = this._map;
                 if (this.info) {
                     this.info.removePopup(true);
@@ -128,9 +129,21 @@
             return this;
         },
 
+        _chkActive: function () {
+            var options = this.options,
+                container = this.getContainer();
+
+            if (options.infoMode || options.dragMode) {
+                L.DomUtil.removeClass(this.getContainer(), 'leaflet-cadastre-infoDisabled');
+            } else {
+                L.DomUtil.addClass(this.getContainer(), 'leaflet-cadastre-infoDisabled');
+            }
+        },
+
         disableDrag: function () {
             this.options.dragMode = false;
             if (this._map) {
+                this._chkActive();
                 var map = this._map;
                 this.options.shiftPosition._add(this._pos);
                 this._pos = L.point(0, 0);
@@ -165,6 +178,7 @@
             if (this.options.dragMode) {
                 this.enableDrag();
             }
+            this._chkActive();
         },
 
         _setAutoZIndex: function () {  // we don't want autoZIndex
@@ -175,6 +189,7 @@
             if (this._map && this.info) {
                 this._map.on('click', this.info.click, this);
                 L.DomUtil.addClass(this.getContainer(), 'leaflet-clickable-raster-layer');
+                this._chkActive();
             }
             
             return this;
@@ -185,6 +200,7 @@
             if (this._map && this.info) {
                 this._map.off('click', this.info.click, this);
                 L.DomUtil.removeClass(this.getContainer(), 'leaflet-clickable-raster-layer');
+                this._chkActive();
             }
             return this;
         }

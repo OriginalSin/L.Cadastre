@@ -1,4 +1,7 @@
-﻿.leaflet-clickable-raster-layer {
+﻿.leaflet-cadastre-infoDisabled {
+    pointer-events: none;
+}
+.leaflet-clickable-raster-layer {
     cursor: help;
 }
 .pseudoLink {
