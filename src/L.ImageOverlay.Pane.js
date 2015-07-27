@@ -63,6 +63,25 @@
                     this._setAutoZIndex(pane, Math.min);
                 }
                 return this;
+            },
+
+            _loadend: function () {
+                if ('loaderStatus' in L.gmxUtil) {
+                    L.gmxUtil.loaderStatus(this._url, true);
+                }
+            },
+
+            _onImageLoad: function () {
+                this.fire('load');
+                this._loadend();
+            },
+
+            _initImage: function () {
+                L.ImageOverlay.prototype._initImage.call(this);
+                if ('loaderStatus' in L.gmxUtil) {
+                    L.gmxUtil.loaderStatus(this._url);
+                    this._image.onerror = L.bind(this._loadend, this);
+                }
             }
         });
     };

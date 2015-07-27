@@ -158,8 +158,26 @@
             return this;
         },
 
+        _tileloadstart: function (ev) {
+            if ('loaderStatus' in L.gmxUtil) {
+                ev.tile._statusUrl = ev.url
+                L.gmxUtil.loaderStatus(ev.url);
+            }
+        },
+
+        _tileloadend: function (ev) {
+            if ('loaderStatus' in L.gmxUtil) {
+                L.gmxUtil.loaderStatus(ev.tile._statusUrl, true);
+            }
+        },
+
         onRemove: function (map) {
-            this.off('tileerror', this._tileerrorFunc, this);
+            this
+                .off('tileerror', this._tileerrorFunc, this)
+                .off('tileloadstart', this._tileloadstart, this)
+                .off('tileload tileunload', this._tileloadend, this);
+
+            //map.off('click', this._click, this);
             if (this.info) {
                 this.info.overlays.clearAll(true);
             }
@@ -169,8 +187,11 @@
         onAdd: function (map) {
             L.TileLayer.WMS.prototype.onAdd.call(this, map);
             this.setZIndex(this.options.zIndex);
-            this.on('tileerror', this._tileerrorFunc, this);
-            
+            this
+                .on('tileerror', this._tileerrorFunc, this)
+                .on('tileloadstart', this._tileloadstart, this)
+                .on('tileload tileunload', this._tileloadend, this);
+
             if (this.options.infoMode) {
                 this.enableInfoMode();
             }
@@ -190,7 +211,6 @@
                 L.DomUtil.addClass(this.getContainer(), 'leaflet-clickable-raster-layer');
                 this._chkActive();
             }
-            
             return this;
         },
 
