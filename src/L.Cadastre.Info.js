@@ -1647,8 +1647,9 @@
 
         setPopup: function(ev) {
             if (!info.layer._dragstate) {
-                ctrlKey = ev.originalEvent.ctrlKey;
-                if (!ctrlKey) info.popup.setLatLng(ev.latlng);
+                if (!ev.originalEvent || !ev.originalEvent.ctrlKey) {
+                    info.popup.setLatLng(ev.latlng);
+                }
                 prepareContent(ev.latlng);
             }
         }
