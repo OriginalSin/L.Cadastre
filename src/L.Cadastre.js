@@ -25,7 +25,7 @@
         },
 
         initialize: function (url, options) {
-            this.info.init(this);
+            if (this.info) { this.info.init(this); }
             this._pos = L.point(0, 0);
             this._pixelPoint = L.point(0, 0);
             this._tileerrorFunc = function (ev) {
@@ -181,6 +181,7 @@
             if (this.info) {
                 this.info.overlays.clearAll(true);
             }
+            this.disableInfoMode();
             L.TileLayer.WMS.prototype.onRemove.call(this, map);
         },
 
