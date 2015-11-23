@@ -79,7 +79,7 @@
             _initImage: function () {
                 L.ImageOverlay.prototype._initImage.call(this);
                 if ('loaderStatus' in L.gmxUtil) {
-                    L.gmxUtil.loaderStatus(this._url);
+                    if (this._url) { L.gmxUtil.loaderStatus(this._url); }
                     this._image.onerror = L.bind(this._loadend, this);
                 }
             }
@@ -90,4 +90,10 @@
     L.imageOverlay.pane = function (imageUrl, bounds, options) {
       return new L.ImageOverlay.Pane(imageUrl, bounds, options);
     };
+
+    if (window.gmxCore) {
+        gmxCore.addModule('L.ImageOverlay.Pane', function() {
+            return L.ImageOverlay.Pane;
+        });
+    }
 })();
