@@ -1,19 +1,20 @@
 {
-  "name": "Cadastre",
-  "version": "0.0.1",
-  "description": "Cadastre layer for Leaflet",
-  "devDependencies": {
-    "jake": "~0.5.16",
-    "ncp": "^1.0.1",
-    "uglify-js": "~2.3.6"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/OriginalSin/buildCadastre.git"
-  },
-  "keywords": [
-    "gis",
-    "leaflet",
-    "geomixer"
-  ]
+	"name": "L.Cadastre",
+	"version": "0.0.1",
+	"description": "Cadastre layer",
+	"dependencies": {
+        "jake": "~0.5.16",
+        "ncp": "^1.0.1",
+        "uglify-js": "~2.3.6"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git://github.com/OriginalSin/L.Cadastre.git"
+	},
+	"keywords": ["gis", "leaflet", "geomixer"],
+	"scripts": {
+		"build": "jake",
+		"postinstall": "jake"
+	},
+	"main": "dist/cadastre-src.js"
 }

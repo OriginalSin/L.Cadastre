@@ -137,9 +137,9 @@
                 container = this.getContainer();
 
             if (options.infoMode || options.dragMode) {
-                L.DomUtil.removeClass(this.getContainer(), 'leaflet-cadastre-infoDisabled');
+                L.DomUtil.removeClass(container, 'leaflet-cadastre-infoDisabled');
             } else {
-                L.DomUtil.addClass(this.getContainer(), 'leaflet-cadastre-infoDisabled');
+                L.DomUtil.addClass(container, 'leaflet-cadastre-infoDisabled');
             }
         },
 
