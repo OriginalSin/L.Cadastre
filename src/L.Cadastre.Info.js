@@ -853,10 +853,6 @@
         return str;
     };
 
-    String.prototype.paddingLeft = function (paddingValue) {
-        return String(paddingValue + this).slice(-paddingValue.length);
-    };
-
     function getCadastreObjectType(feature) {
         var objectType;
         if (typeof feature.attributes["Тип ОКС"] !== "undefined") {
@@ -951,23 +947,24 @@
         return cadNumber;
     };
 
-    /*Разсширение для String
-    *добавлено для нормазации кадастрового номера 10 -> 0010
-    *использование '332'.pad('0', 6); -> '000332' или '332'.pad('0', 6, 1); -> '332000'
+    /*
+    * Нормазация кадастрового номера 10 -> 0010
+    * использование pad('332', '0', 6); -> '000332' или pad('332', '0', 6, 1); -> '332000'
     */
-    String.prototype.pad = function (_char, len, to) {
-        if (!this || !_char || this.length >= len) {
-            return this;
+    var pad = function (str, _char, len, to) {
+        if (!str || !_char) {
+            return str;
         }
-        to = to || 0;
 
-        var ret = this;
-
-        var max = (len - this.length) / _char.length + 1;
-        while (--max) {
-            ret = (to) ? ret + _char : _char + ret;
+        while (str.length < len) {
+            if (to) {
+                str += _char;
+            } else {
+                str = _char + str;
+            }
         }
-        return ret;
+        
+        return str;
     };
     
     // var fnRefreshMap = null;
@@ -1303,22 +1300,22 @@
             }
 
             if (numberParts[0] && numberParts[0].length < 2)
-                cadastreNumber += numberParts[0].pad('0', 2);
+                cadastreNumber += pad(numberParts[0], '0', 2);
             else if (numberParts[0] && numberParts[0].length == 2)
                 cadastreNumber += numberParts[0];
 
             if (numberParts[1] && numberParts[1].length < 2)
-                cadastreNumber += numberParts[1].pad('0', 2);
+                cadastreNumber += pad(numberParts[1], '0', 2);
             else if (numberParts[1] && numberParts[1].length == 2)
                 cadastreNumber += numberParts[1];
 
             if (numberParts[2] && numberParts[2].length < 7)
-                cadastreNumber += numberParts[2].pad('0', 7);
+                cadastreNumber += pad(numberParts[2], '0', 7);
             else if (numberParts[2] && numberParts[2].length == 7)
                 cadastreNumber += numberParts[2];
 
             if (numberParts[3] && numberParts[3].length < 4)
-                cadastreNumber += numberParts[3].pad('0', 4);
+                cadastreNumber += pad(numberParts[3], '0', 4);
             else if (numberParts[3] && numberParts[3].length == 4)
                 cadastreNumber += numberParts[3];
         }

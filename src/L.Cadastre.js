@@ -116,6 +116,7 @@
                 if (this.info) {
                     this.info.removePopup(true);
                 }
+                if (map._pathRoot) { map._pathRoot.style.pointerEvents = 'none'; }
                 map.dragging.disable();
                 L.DomUtil.disableImageDrag();
                 map.on('zoomstart', this.redraw, this);
@@ -150,6 +151,7 @@
                 this.options.shiftPosition._add(this._pos);
                 this._pos = L.point(0, 0);
 
+                if (map._pathRoot) { map._pathRoot.style.pointerEvents = ''; }
                 map.dragging.enable();
                 L.DomUtil.enableImageDrag();
                 map.off('zoomstart', this.redraw, this);
