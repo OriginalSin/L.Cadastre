@@ -1118,11 +1118,11 @@
     var ctrlKey = false;
     function showInfoWindow(objectType, featureSet) {
         info.popup.fire('loaderend');
-
+        var skipPopup = info.layer.options.onClick;
         var popup = info.popup,
             lmap = info.layer._map;
 
-        if (!silent) {
+        if (!silent && !skipPopup) {
             if (!ctrlKey) popup.openOn(lmap);
         } else {
             lmap.removeLayer(info.popup);
@@ -1161,6 +1161,9 @@
                 layerId: objectType.layerId,
                 value: featureSet.features[0].attributes[fieldId]
             });
+        }
+        if (skipPopup) {
+            skipPopup(featureSet);
         }
     };
 
@@ -1326,11 +1329,16 @@
     var findFeature = null;
 
     var myAlert = function (data) {
-        if ($ && $("#alert")) {
-            $("#alert").show(true);
+        if (info.layer.options.onClick) {
+            info.layer.options.onClick({features: []});
         } else {
-            if (nsGmx && nsGmx.widgets && nsGmx.widgets.notifications) {
-                nsGmx.widgets.notifications.stopAction('L.Cadatsre.Info', 'error','Ошибка получения данных!');
+            var alert = document.getElementById('alert');
+            if (alert) {
+                $("#alert").show(true);
+            } else {
+                if (window.nsGmx && nsGmx.widgets && nsGmx.widgets.notifications) {
+                    nsGmx.widgets.notifications.stopAction('L.Cadatsre.Info', 'error','Ошибка получения данных!');
+                }
             }
         }
         info.layer.fire('errorloading', {data: data});
@@ -1340,8 +1348,9 @@
 
         value = value.trim();
 
-        var lmap = info.layer._map;
-        if ($ && $("#alert")) {
+        var lmap = info.layer._map,
+            alert = document.getElementById('alert');
+        if (alert) {
             $("#alert").hide();
         }
         if (lmap && checkCadastreNumber(value)) {
@@ -1496,7 +1505,7 @@
                 imageUrl += '&' + key + '=' + params[key];
             }
 
-            overlays[type].arr.push(new L.ImageOverlay.Pane(imageUrl, lmap.getBounds())
+            overlays[type].arr.push(new L.ImageOverlay.Pane(imageUrl, lmap.getBounds(), info.layer.options.imageOverlayOptions)
                 .on('load', function() {
                     overlays.clear(false, type);
                     info.popup.fire('loaderend');

@@ -25,6 +25,7 @@
         },
 
         initialize: function (url, options) {
+            L.setOptions(options);
             if (this.info) { this.info.init(this); }
             this._pos = L.point(0, 0);
             this._pixelPoint = L.point(0, 0);
@@ -196,7 +197,7 @@
             if (this.info) {
                 this.info.overlays.clearAll(true);
             }
-            this.disableInfoMode();
+            this._clearInfoMode();
             L.TileLayer.WMS.prototype.onRemove.call(this, map);
         },
 
@@ -232,12 +233,16 @@
 
         disableInfoMode: function () {
             this.options.infoMode = false;
+            this._clearInfoMode();
+            return this;
+        },
+
+        _clearInfoMode: function () {
             if (this._map && this.info) {
                 this._map.off('click', this.info.click, this);
                 L.DomUtil.removeClass(this.getContainer(), 'leaflet-clickable-raster-layer');
                 this._chkActive();
             }
-            return this;
         }
     });
 
