@@ -1376,7 +1376,8 @@
                     var featureExtent = utils.getFeatureExtent(data.features[0].attributes),
                         toZoom = lmap.getBoundsZoom(featureExtent.latLngBounds);
                     lmap.setView(featureExtent.latlng, toZoom);
-                    info.setPopup(featureExtent);
+                    info.popup.setLatLng(featureExtent.latlng);
+                    showInfoWindow(cadType, data);
                 }, function () {
                     info.popup.fire('loaderend');
                 });
