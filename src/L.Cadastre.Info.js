@@ -479,9 +479,9 @@
                 dateField = document.getElementById(elementId);
                 if (dateField) {
                     dateField.innerHTML = content;
-                }
-                else {
-                    dateField.innerHTML = NO_DATA;
+                // }
+                // else {
+                    // dateField.innerHTML = NO_DATA;
                 }
             }, 2000);
         }
