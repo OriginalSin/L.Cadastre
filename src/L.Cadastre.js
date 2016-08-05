@@ -10,7 +10,8 @@
             infoMode: false,
             dragMode: false,
             shiftPosition: L.point(0, 0),      // For shift layer
-            template: 'http://{s}.maps.rosreestr.ru/arcgis/rest/services/Cadastre/Cadastre/MapServer/export',
+            template: 'http://pkk5.rosreestr.ru/arcgis/rest/services/Cadastre/Cadastre/MapServer/export',
+            // template: 'http://{s}.maps.rosreestr.ru/arcgis/rest/services/Cadastre/Cadastre/MapServer/export',
             attribution: '<a href="http://rosreestr.ru">© Росреестр</a>'
         },
 
@@ -96,7 +97,6 @@
             var _this = this;
             setTimeout(function () { _this._dragstate = false; }, 0);
         },
-
         _drag: function (ev) {
             this._pixelPoint = ev.target._newPos;
 

@@ -1,4 +1,80 @@
 (function () {
+    var cad_types = {
+        1: 'Земельный участок',
+        2: 'Кадастровый квартал',
+        3: 'Кадастровый район',
+        4: 'Кадастровый округ',
+        5: 'ОКС'
+        // 7: 'Границы'
+        // 10: 'ЗОУИТ'
+        // 6: 'Территориальные зоны'
+        // 13: 'Красные линии'
+        // 12: 'Лес'
+        // 15: 'СРЗУ'
+        // 16: 'ОЭЗ'
+        // 9: 'ГОК'
+    };
+    var templates = {
+        1: '<div class="cadastreInfo-container">\
+                <div class="row infoRow">\
+                    <div class="col-1">Тип:</div>\
+                    <div class="col-2">Земельный участок</div>\
+                </div>\
+                <div class="row infoRow">\
+                    <div class="col-1">Кад. номер:</div>\
+                    <div class="col-2" data-searchtype="1" data-text="40:13:120203:101"> 40:13:120203:101</div>\
+                    <div class="col-3" data-text="40:13:120203:101"> 40:13:120203:101</div>\
+                </div>\
+                <div class="row infoRow">\
+                    <div class="col-1">Кад. квартал:</div>\
+                    <div class="col-2">40:13:120203</div>\
+                </div>\
+                <div class="row infoRow">\
+                    <div class="col-1">Статус:</div>\
+                    <div class="col-2"> Ранее учтенный</div>\
+                </div>\
+                <div class="row infoRow">\
+                    <div class="col-1">Адрес:</div>\
+                    <div class="col-2">-</div>\
+                </div>\
+                <div class="row infoRow">\
+                    <div class="col-1">Категория земель:</div>\
+                    <div class="col-2">Земли сельскохозяйственного назначения</div>\
+                </div>\
+                <div class="row infoRow">\
+                    <div class="col-1">Форма собственности:</div>\
+                    <div class="col-2">Частная собственность</div>\
+                </div>\
+                <div class="row infoRow">\
+                    <div class="col-1">Кадастровая стоимость:</div>\
+                    <div class="col-2">213 170,73 руб.</div>\
+                </div>\
+                <div class="row infoRow">\
+                    <div class="col-1">Декларированная площадь:</div>\
+                    <div class="col-2">600 кв. м</div>\
+                </div>\
+                <div class="row infoRow">\
+                    <div class="col-1">Разрешенное использование:</div>\
+                    <div class="col-2">Для ведения гражданами садоводства и огородничества</div>\
+                </div>\
+                <div class="row infoRow">\
+                    <div class="col-1">по документу:</div>\
+                    <div class="col-2">для садоводства</div>\
+                </div>\
+                <div class="row infoRow">\
+                    <div class="col-1">Дата постановки на ГКУ:</div>\
+                    <div class="col-2">18.03.2008</div>\
+                </div>\
+                <div class="row infoRow">\
+                    <div class="col-1">Дата изменения сведений в ГКН:</div>\
+                    <div class="col-2">05.04.2016</div>\
+                </div>\
+                <div class="row infoRow">\
+                    <div class="col-1">Дата выгрузки сведений из ГКН:</div>\
+                    <div class="col-2">05.04.2016</div>\
+                </div>\
+            </div>'
+    };
     var CadastreTypes = {
         okrug: {
             layerId: 4,
@@ -1128,19 +1204,26 @@
             lmap.removeLayer(info.popup);
         }
 
-        var title = '<div class="cadastreTitle">' + buildInfoWindowTitle(objectType, featureSet.features[0]) + '</div>';
+        var attrs = featureSet.feature.attrs;
+        var title = '<div class="cadastreTitle">' + buildInfoWindowTitle(objectType, attrs.id) + '</div>';
 
         //******************************************************************************************************************************
-        var cadastreNumber = featureSet.features[0].attributes.CAD_NUM
+        var cadastreNumber = attrs.id
         if (silent) {
             currentFeature.properties.KN = cadastreNumber;
         }
         //******************************************************************************************************************************
 
-        addCadastreNumbers(featureSet.features[0].attributes);
-        addPointAttribute(featureSet.features);
-        showResultList(objectType, featureSet.features);
-        var content = buildInfoWindowContent(objectType, featureSet.features[0]);
+        // addCadastreNumbers(attrs);
+        // addPointAttribute(featureSet.feature);
+        // showResultList(objectType, featureSet.feature);
+        // var content = buildInfoWindowContent(objectType, featureSet.feature);
+        var temp = templates[featureSet.feature.type];
+        var content = temp.replace(/{[^{}]+}/g, function (key) {
+            return attrs[key.replace(/[{}]+/g, '')] || '';
+        });
+
+        // var content = buildInfoWindowContent(objectType, featureSet.feature);
         popup.setContent(title + content);
 
         //
@@ -1154,12 +1237,12 @@
         //
         //
 
-        var fieldId = objectType.fieldId || featureSet.displayFieldName || FIELDS.cadastreNumber;
+        // var fieldId = objectType.fieldId || featureSet.displayFieldName || FIELDS.cadastreNumber;
         if (!silent) {
             overlays.setImageOverlay({
-                fieldId: fieldId,
-                layerId: objectType.layerId,
-                value: featureSet.features[0].attributes[fieldId]
+                fieldId: 1,
+                layerId: featureSet.feature.type,
+                value: featureSet.feature
             });
         }
         if (skipPopup) {
@@ -1179,6 +1262,17 @@
             requestError();
         });
     };
+
+    function showAttrByCadNum(objectType, layer, feature) {
+//par = utils.getRequestParams('searchObject', info.layer, {cID: feature.attrs.id, latlng: latlng});
+        var par = utils.getRequestParams('searchObject', layer, {cID: feature.attrs.id});
+        L.gmxUtil.requestJSONP(par.url, par.params, par.options
+        ).then(function(featureSet) {
+            showInfoWindow(objectType, featureSet);
+        }, function () {
+            requestError();
+        });
+    }
 
     function searchObject(objectType, whereClause) {
         var par = utils.getRequestParams('searchObject', objectType, {where: whereClause});
@@ -1208,46 +1302,53 @@
         var par = utils.getRequestParams('identify', info.layer, {latlng: latlng});
         L.gmxUtil.requestJSONP(par.url, par.params, par.options
         ).then(function(data) {
-            if (data && data.results && data.results.length > 0) {
+            if (data && data.status === 200 && data.features && data.features.length > 0) {
 
                 var featureSet = [],
-                    len = data.results.length;
+                    len = data.features.length;
 
                 if (searchValue && len > 1) {
                     for (var i = 0; i < len; i++) {
-                        if (data.results[i].value == searchValue) {
-                            featureSet = [data.results[i]];
+                        if (data.features[i].value == searchValue) {
+                            featureSet = [data.features[i]];
                             searchValue = null;
                             break;
                         }
                     }
                 } else {
-                    featureSet = [data.results[0]];
+                    featureSet = [data.features[0]];
                 }
                 len = featureSet.length;
                 if (len > 0) {
 
-                    var feature = featureSet[0],
-                        objectType = getCadastreObjectType(feature);
+                    var feature = featureSet[0];
+                    showAttrByCadNum('searchObject', info.layer, feature);
+                    // ,
+                        // objectType = getCadastreObjectType(feature);
+// pkk5 searchObject searchObject
+        // par = utils.getRequestParams('searchObject', info.layer, {cID: feature.attrs.id, latlng: latlng});
+        // L.gmxUtil.requestJSONP(par.url, par.params, par.options
+        // ).then(function(data1) {
+// console.log('cccccc', data1);
+        // });
+                    // var whereClause = '',
+                        // cadNumbers = '';
+                    // for (var i = 0; i < len; i++) {
+                        // whereClause += ",'" + featureSet[i].value + "'";
+                        // cadNumbers += ",'" + featureSet[i].attributes[objectType == CadastreTypes.oks ? 'Кадастровый номер' : 'Строковый идентификатор ИПГУ'] + "'";
+                    // }
 
-                    var whereClause = '',
-                        cadNumbers = '';
-                    for (var i = 0; i < len; i++) {
-                        whereClause += ",'" + featureSet[i].value + "'";
-                        cadNumbers += ",'" + featureSet[i].attributes[objectType == CadastreTypes.oks ? 'Кадастровый номер' : 'Строковый идентификатор ИПГУ'] + "'";
-                    }
-
-                    if (objectType == CadastreTypes.parcel || objectType == CadastreTypes.oks) {
-                        searchParcelObject(objectType, { cadNums: "[" + cadNumbers.substring(1) + "]", onlyAttributes: false });
-                    }
-                    else {
-                        if (objectType) {
-                            searchObject(objectType, getObjectIdField(objectType) + " IN (" + whereClause.substring(1) + ")");
-                        } else {
-                            currentFeature.properties.status = "проверить вручную";
-                            dequeueRequest();
-                        }
-                    }
+                    // if (objectType == CadastreTypes.parcel || objectType == CadastreTypes.oks) {
+                        // searchParcelObject(objectType, { cadNums: "[" + cadNumbers.substring(1) + "]", onlyAttributes: false });
+                    // }
+                    // else {
+                        // if (objectType) {
+                            // searchObject(objectType, getObjectIdField(objectType) + " IN (" + whereClause.substring(1) + ")");
+                        // } else {
+                            // currentFeature.properties.status = "проверить вручную";
+                            // dequeueRequest();
+                        // }
+                    // }
                 } else {
                     requestError();
                 }
@@ -1487,18 +1588,21 @@
                 zIndex = info.layer.options.zIndex - 2;
                 
             var params = L.Util.extend(overlays.params, {
-                layers: 'show:' + layerId,
+                layers: 'show:6,7', // + layerId,
                 size: mapExtent.size,
                 bbox: mapExtent.bbox,
             });
             var imageUrl = cadastreServer + 'Cadastre/Thematic/MapServer/export?f=image';
             if ('fieldId' in attr) {
                 var fieldId = attr.fieldId;
-                imageUrl = cadastreServer + 'Cadastre/CadastreSelected/MapServer/export?f=image';
-                params.layerDefs = fieldId === 'PARCEL_ID' ?
-                    '{"' + layerId + '":"' + fieldId + ' LIKE \'' + attr.value + '\'"}'
-                    : layerId + ':' + fieldId + ' LIKE \'' + attr.value + '\''
-                ;
+                var cadId = attr.value.attrs.id;
+                imageUrl = 'http://pkk5.rosreestr.ru/arcgis/rest/services/Cadastre/CadastreSelected/MapServer/export?f=image';
+//http://pkk5.rosreestr.ru/arcgis/rest/services/Cadastre/CadastreSelected/MapServer/export?dpi=96&transparent=true&format=png32&layers=show%3A6%2C7&bbox=4087352.690935486%2C7437225.101514038%2C4087601.7084416198%2C7437456.502673814&bboxSR=102100&imageSR=102100&size=834%2C775&layerDefs=%7B%226%22%3A%22ID%20%3D%20%2750%3A26%3A100209%3A1175%27%22%2C%227%22%3A%22ID%20%3D%20%2750%3A26%3A100209%3A1175%27%22%7D&f=image
+                // params.layerDefs = fieldId === 'PARCEL_ID' ?
+                    // '{"' + layerId + '":"' + fieldId + ' LIKE \'' + attr.value + '\'"}'
+                    // : layerId + ':' + fieldId + ' LIKE \'' + attr.value + '\''
+                // ;
+                params.layerDefs = '{"6":"ID = \'' + cadId + '\'","7":"ID = \'' + cadId + '\'"}'
                 zIndex++;
             }
 
@@ -1534,7 +1638,9 @@
         }
     };
 
-    var cadastreServer = 'http://maps.rosreestr.ru/arcgis/rest/services/';
+    // var cadastreServer = 'http://maps.rosreestr.ru/arcgis/rest/services/';
+    var cadastreServer = 'http://pkk5.rosreestr.ru/api/features/';
+    // http://pkk5.rosreestr.ru/api/features/?WrapStyle=func&tolerance=0&text=55%2C691011875098525%2037%2C3806032538414&callback=_19
     var utils = {
         getRequestParams: function(type, layer, extend) {
             var out = {
@@ -1542,20 +1648,35 @@
             };
             if (type === 'identify') {
                 var point = utils.getShiftPointMercator(extend.latlng, layer.getShift()),
+                    text = (extend.latlng.lat + ' ' + extend.latlng.lng).replace(/\./g, ','),
                     mapExtent = utils.getMapExtent(layer);
+// http://pkk5.rosreestr.ru/api/features/1?text=55,414498%2036,850119&tolerance=2&limit=11&callback=jQuery19107264016533009807_1466149033343&_=1466149033365
 
-                out.url = cadastreServer + 'Cadastre/CadastreSelected/MapServer/identify';
+                out.url = cadastreServer + '';
                 out.params = {
-                    f: 'json',
-                    geometry: '{"x":' + point.x + ',"y":' + point.y + ',"spatialReference":{"wkid":102100}}',
-                    tolerance: '0',
-                    returnGeometry: false,
-                    mapExtent: mapExtent.extent,
-                    imageDisplay: mapExtent.size + ',96',
-                    geometryType: 'esriGeometryPoint',
-                    sr: '102100',
-                    layers: 'top'
+                    limit: 11,
+                    text: text,
+                    tolerance: '2'
+                    // ,
+                    // returnGeometry: false,
+                    // mapExtent: mapExtent.extent,
+                    // imageDisplay: mapExtent.size + ',96',
+                    // geometryType: 'esriGeometryPoint',
+                    // sr: '102100',
+                    // layers: 'top'
                 };
+            } else if (type === 'searchObject') {
+// http://pkk5.rosreestr.ru/api/features/1/50:26:130202:136?callback=jQuery19107264016533009807_1466149033343&_=1466149033366
+// http://pkk5.rosreestr.ru/api/features//1/50:26:110121:27?cID=50%3A26%3A110121%3A27&latlng=LatLng(55.48133%2C%2036.62799)&callback=_2
+// http://pkk5.rosreestr.ru/api/features/1/40:13:120203:100?callback=jQuery19105215297230292475_1466160731433&_=1466160731435
+                out.url = cadastreServer + '1/' + extend.cID;
+                out.params = L.Util.extend({
+                    // f: 'json',
+                    // returnGeometry: false,
+                    // geometryType: 'esriGeometryPoint',
+                    // spatialRel: 'esriSpatialRelIntersects',
+                    // outFields: '*'
+                }, extend);
             } else if (type === 'cadastreSearch1') {
                 out.url = layer.layerUrl + '/query';
                 out.params = L.Util.extend({
@@ -1571,15 +1692,6 @@
                     f: 'json',
                     returnGeometry: false,
                     outFields: 'ONLINE_ACTUAL_DATE,ACTUAL_DATE'
-                }, extend);
-            } else if (type === 'searchObject') {
-                out.url = layer.layerUrl + '/query';
-                out.params = L.Util.extend({
-                    f: 'json',
-                    returnGeometry: false,
-                    geometryType: 'esriGeometryPoint',
-                    spatialRel: 'esriSpatialRelIntersects',
-                    outFields: '*'
                 }, extend);
             } else if (type === 'cadastreSearch') {
                 out.url = layer.layerUrl;
@@ -1613,7 +1725,7 @@
 
             var size = {
                 x: bounds.max.x - bounds.min.x,
-                y: (ne.y - sw.y) * mInPixel
+                y: Math.floor((ne.y - sw.y) * mInPixel)
             };
             return {
                 size: size.x + ',' + size.y,
